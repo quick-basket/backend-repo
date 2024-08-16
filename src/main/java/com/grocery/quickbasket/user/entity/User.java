@@ -32,6 +32,10 @@ public class User {
     @Column(name = "img_profile")
     private String imgProfile;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role;
+
     @ColumnDefault("false")
     @Column(name = "is_verified")
     private Boolean isVerified;
@@ -44,10 +48,32 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
 /*
  TODO [Reverse Engineering] create field to map the 'role' column
  Available actions: Define target Java type | Uncomment as is | Remove column mapping
     @Column(name = "role", columnDefinition = "user_role not null")
     private Object role;
 */
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+
+    public void softDelete() {
+        this.deletedAt = Instant.now();
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
+    }
 }
