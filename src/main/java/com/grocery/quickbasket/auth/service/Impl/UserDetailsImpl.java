@@ -3,6 +3,7 @@ package com.grocery.quickbasket.auth.service.Impl;
 import com.grocery.quickbasket.auth.entity.UserAuth;
 import com.grocery.quickbasket.user.service.UserService;
 import lombok.extern.java.Log;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Service;
 public class UserDetailsImpl implements UserDetailsService {
     private final UserService userService;
 
-    public UserDetailsImpl(UserService userService) {
+    public UserDetailsImpl(@Lazy UserService userService) {
         this.userService = userService;
     }
 
