@@ -32,10 +32,6 @@ public class User {
     @Column(name = "img_profile")
     private String imgProfile;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
-    private Role role;
-
     @ColumnDefault("false")
     @Column(name = "is_verified")
     private Boolean isVerified;
@@ -51,12 +47,9 @@ public class User {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-/*
- TODO [Reverse Engineering] create field to map the 'role' column
- Available actions: Define target Java type | Uncomment as is | Remove column mapping
-    @Column(name = "role", columnDefinition = "user_role not null")
-    private Object role;
-*/
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role = Role.user;
 
     @PrePersist
     protected void onCreate() {
