@@ -32,6 +32,10 @@ public class User {
     @Column(name = "img_profile")
     private String imgProfile;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role;
+
     @ColumnDefault("false")
     @Column(name = "is_verified")
     private Boolean isVerified;
@@ -47,9 +51,6 @@ public class User {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
-    private Role role = Role.user;
 
     @PrePersist
     protected void onCreate() {
