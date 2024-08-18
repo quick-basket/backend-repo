@@ -1,6 +1,7 @@
 package com.grocery.quickbasket.products.service.impl;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.grocery.quickbasket.productCategory.entity.ProductCategory;
 import com.grocery.quickbasket.productCategory.repository.ProductCategoryRepository;
 import com.grocery.quickbasket.productImages.entity.ProductImage;
 import com.grocery.quickbasket.productImages.repository.ProductImageRepository;
+import com.grocery.quickbasket.products.dto.ProductListResponseDto;
 import com.grocery.quickbasket.products.dto.ProductRequestDto;
 import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.entity.Product;
@@ -121,13 +123,59 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto getProductById(Long id) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("product not found"));
-        return mapToDto(product);
+        
+        List<String> imageUrls = productImageRepository.findByProduct(product)
+            .stream().map(ProductImage::getImageUrl)
+            .collect(Collectors.toList());
+        Inventory inventory = inventoryRepository.findByProductId(id)
+            .orElseThrow(() -> new RuntimeException("product not found"));
+
+        ProductResponseDto responseDto = new ProductResponseDto();
+        responseDto.setId(product.getId());
+        responseDto.setName(product.getName());
+        responseDto.setDescription(product.getDescription());
+        responseDto.setPrice(product.getPrice());
+        responseDto.setCategoryId(product.getCategory().getId());
+        responseDto.setCategoryName(product.getCategory().getName());
+        responseDto.setImageUrls(imageUrls);
+        responseDto.setQuantity(inventory.getQuantity());
+        responseDto.setStoreId(inventory.getStore().getId());
+        responseDto.setStoreName(inventory.getStore().getName());
+        responseDto.setCreatedAt(product.getCreatedAt());
+        responseDto.setUpdatedAt(product.getUpdatedAt());
+
+        return responseDto;
     }
 
     @Override
-    public List<ProductResponseDto> getAllProducts() {
+    public List<ProductListResponseDto> getAllProducts() {
         List<Product> products = productRepository.findAll();
-        return products.stream().map(this::mapToDto).collect(Collectors.toList());
+        List<ProductListResponseDto> responseDtos = new ArrayList<>();
+
+        for (Product product : products) {
+            ProductListResponseDto dto = new ProductListResponseDto();
+            dto.setId(product.getId());
+            dto.setName(product.getName());
+            dto.setPrice(product.getPrice());
+
+            List<ProductImage> images = productImageRepository.findByProduct(product);
+            if (!images.isEmpty()) {
+                dto.setImageUrl(images.get(0).getImageUrl());
+            } else {
+                dto.setImageUrl(null);
+            }
+
+            Inventory inventory = inventoryRepository.findByProductId(product.getId())
+                .orElseGet(() -> {
+                    Inventory inv = new Inventory();
+                    inv.setQuantity(0);
+                    return inv;
+                });
+            dto.setQuantity(inventory.getQuantity());
+
+            responseDtos.add(dto);
+        }
+        return responseDtos;
     }
 
     @Override
