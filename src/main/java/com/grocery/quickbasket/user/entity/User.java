@@ -34,7 +34,7 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
-    private Role role;
+    private Role role = Role.user;
 
     @ColumnDefault("false")
     @Column(name = "is_verified")
