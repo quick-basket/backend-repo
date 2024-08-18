@@ -13,6 +13,7 @@ src/main/resources/certs/
 .settings
 .springBeans
 .sts4-cache
+.env.development
 
 ### IntelliJ IDEA ###
 .idea
