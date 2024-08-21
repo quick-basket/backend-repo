@@ -1,5 +1,7 @@
 package com.grocery.quickbasket.config;
 
+import com.grocery.quickbasket.auth.service.AuthService;
+import com.grocery.quickbasket.user.service.UserService;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -10,6 +12,7 @@ import jakarta.servlet.http.Cookie;
 import lombok.extern.java.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -36,10 +39,12 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
+    private final AuthService authService;
 
-    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService) {
+    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, @Lazy AuthService authService) {
         this.rsaConfigProperties = rsaConfigProperties;
         this.userDetailsService = userDetailsService;
+        this.authService = authService;
     }
 
     @Bean
@@ -80,6 +85,7 @@ public class SecurityConfig {
         return new NimbusJwtEncoder(jwkSource);
     }
 
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
@@ -98,6 +104,9 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth2 -> {
+                    oauth2.successHandler(new CustomOAuth2SuccessHandler(authService));
+                })
                 .oauth2ResourceServer((oauth2) -> {
                     oauth2.jwt((jwt) -> jwt.decoder(jwtDecoder()));
                     oauth2.bearerTokenResolver((request) -> {
@@ -120,6 +129,5 @@ public class SecurityConfig {
                 .build();
 
     }
-
 
 }
