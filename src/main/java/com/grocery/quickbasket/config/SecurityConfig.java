@@ -81,12 +81,20 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/v1/auth/**").permitAll();
+                    /*
+                    Kalau mau tambahin Role Based access
+                    example:
+                    auth.requestMatchers(HttpMethod.GET,"api/v1/auth").hasAuthority("SCOPE_store_admin");
+
+                    SCOPE_ JANGAN LUPA DIDEPAN
+                    ITU BISA DIKASI SPESIFIK METHOD HTTPNYA, kalau yg store admin khusus get aja. super admin kasi post
+                     */
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -2,6 +2,7 @@ package com.grocery.quickbasket.products.controller;
 
 import java.util.List;
 
+import com.grocery.quickbasket.auth.helper.Claims;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.grocery.quickbasket.products.dto.ProductListResponseDto;
 import com.grocery.quickbasket.products.dto.ProductRequestDto;
 import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.service.ProductService;
@@ -66,7 +68,7 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductResponseDto>> getAllProducts() {
+    public ResponseEntity<List<ProductListResponseDto>> getAllProducts() {
         return ResponseEntity.ok(productService.getAllProducts());
     }
 }
