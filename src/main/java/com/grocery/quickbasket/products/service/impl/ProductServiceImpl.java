@@ -66,9 +66,9 @@ public class ProductServiceImpl implements ProductService {
         if (productRequestDto.getImageFiles() != null && !productRequestDto.getImageFiles().isEmpty()) {
             for (MultipartFile file : productRequestDto.getImageFiles()) {
 
-                long maxFileSize = 2 * 1024 * 1024;
+                long maxFileSize = 1 * 1024 * 1024;
                 if (file.getSize() > maxFileSize) {
-                    throw new RuntimeException("File size exceeds the maximum limit of 2MB");
+                    throw new RuntimeException("File size exceeds the maximum limit of 1MB");
                 }
 
                 String contentType = file.getContentType();
@@ -88,24 +88,12 @@ public class ProductServiceImpl implements ProductService {
                 }
             }
         }
-
-        Inventory inventory = new Inventory();
-        inventory.setProduct(savedProduct);
-        inventory.setQuantity(productRequestDto.getQuantity() != null ? productRequestDto.getQuantity() : 0);
-        if (productRequestDto.getStoreId() != null) {
-        Store store = storeRepository.findById(productRequestDto.getStoreId())
-            .orElseThrow(() -> new RuntimeException("Store not found!"));
-        inventory.setStore(store);
-    } else {
-        throw new RuntimeException("Store ID is required");
-    }
-        inventoryRepository.save(inventory);
-
-        return mapToDto(savedProduct);
+        return ProductResponseDto.mapToDto(savedProduct);
     }
 
+    @Transactional
     @Override
-    public ProductResponseDto updateProduct(Long id, ProductRequestDto productRequestDto) {
+    public String updateProduct(Long id, ProductRequestDto productRequestDto) {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("product not found with id " + id));
         ProductCategory category = productCategoryRepository.findById(productRequestDto.getCategoryId())
@@ -114,9 +102,42 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productRequestDto.getDescription());
         product.setPrice(productRequestDto.getPrice());
         product.setCategory(category);
+        product.setUpdatedAt(LocalDateTime.now());
+        productRepository.save(product);
 
-        Product updatedProduct = productRepository.save(product);
-        return mapToDto(updatedProduct);
+        List<Long> imagesToDelete = productRequestDto.getImagesToDelete();
+        if (imagesToDelete != null && !imagesToDelete.isEmpty()) {
+            List<ProductImage> imagesToDeleteList = productImageRepository.findAllById(imagesToDelete);
+            productImageRepository.deleteAll(imagesToDeleteList);
+        }
+
+        if (productRequestDto.getImageFiles() != null && !productRequestDto.getImageFiles().isEmpty()) {
+            for (MultipartFile file : productRequestDto.getImageFiles()) {
+                long maxFileSize = 1 * 1024 * 1024; // 1MB
+                if (file.getSize() > maxFileSize) {
+                    throw new RuntimeException("File size exceeds the maximum limit of 1MB");
+                }
+
+                String contentType = file.getContentType();
+                if (!("image/jpeg".equals(contentType) || "image/png".equals(contentType))) {
+                    throw new RuntimeException("Only JPG and PNG image types are allowed");
+                }
+
+                try {
+                    Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+                    String imageUrl = (String) uploadResult.get("url");
+
+                    // Save new image to database
+                    ProductImage image = new ProductImage();
+                    image.setProduct(product);
+                    image.setImageUrl(imageUrl);
+                    productImageRepository.save(image);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to upload image to Cloudinary", e);
+                }
+            }
+        }
+        return "update successfully";
     }
 
     @Override
@@ -127,9 +148,6 @@ public class ProductServiceImpl implements ProductService {
         List<String> imageUrls = productImageRepository.findByProduct(product)
             .stream().map(ProductImage::getImageUrl)
             .collect(Collectors.toList());
-        Inventory inventory = inventoryRepository.findByProductId(id)
-            .orElseThrow(() -> new RuntimeException("product not found"));
-
         ProductResponseDto responseDto = new ProductResponseDto();
         responseDto.setId(product.getId());
         responseDto.setName(product.getName());
@@ -138,9 +156,6 @@ public class ProductServiceImpl implements ProductService {
         responseDto.setCategoryId(product.getCategory().getId());
         responseDto.setCategoryName(product.getCategory().getName());
         responseDto.setImageUrls(imageUrls);
-        responseDto.setQuantity(inventory.getQuantity());
-        responseDto.setStoreId(inventory.getStore().getId());
-        responseDto.setStoreName(inventory.getStore().getName());
         responseDto.setCreatedAt(product.getCreatedAt());
         responseDto.setUpdatedAt(product.getUpdatedAt());
 
@@ -156,14 +171,20 @@ public class ProductServiceImpl implements ProductService {
             ProductListResponseDto dto = new ProductListResponseDto();
             dto.setId(product.getId());
             dto.setName(product.getName());
+            dto.setDescription(product.getDescription());
             dto.setPrice(product.getPrice());
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
 
             List<ProductImage> images = productImageRepository.findByProduct(product);
-            if (!images.isEmpty()) {
-                dto.setImageUrl(images.get(0).getImageUrl());
-            } else {
-                dto.setImageUrl(null);
-            }
+            List<String> imageUrls = images.stream()
+                .map(ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+            List<Long> imageIds = images.stream()
+                .map(ProductImage::getId)
+                .collect(Collectors.toList());
+            dto.setImageUrls(imageUrls);
+            dto.setImageIds(imageIds);
 
             Inventory inventory = inventoryRepository.findByProductId(product.getId())
                 .orElseGet(() -> {
@@ -177,22 +198,9 @@ public class ProductServiceImpl implements ProductService {
         }
         return responseDtos;
     }
-
+    
     @Override
     public void deleteProduct(Long id) {
         productRepository.deleteById(id);
     }
-
-    private ProductResponseDto mapToDto (Product product ) {
-        ProductResponseDto dto = new ProductResponseDto();
-        dto.setId(product.getId());
-        dto.setName(product.getName());
-        dto.setDescription(product.getDescription());
-        dto.setPrice(product.getPrice());
-        dto.setCategoryName(product.getCategory().getName());
-        dto.setCreatedAt(product.getCreatedAt());
-        dto.setUpdatedAt(product.getUpdatedAt());
-        return dto;
-    }
-
 }
