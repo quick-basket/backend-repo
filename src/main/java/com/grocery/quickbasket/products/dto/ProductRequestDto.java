@@ -12,7 +12,6 @@ public class ProductRequestDto {
     private BigDecimal price;
     private Long categoryId;
     private List<MultipartFile> imageFiles;
-    private Integer quantity;
-    private Long storeId;
+    private List<Long> imagesToDelete;
 
 }
