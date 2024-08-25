@@ -2,6 +2,7 @@ package com.grocery.quickbasket.auth.controller;
 
 import com.grocery.quickbasket.auth.dto.LoginReqDto;
 import com.grocery.quickbasket.auth.dto.LoginRespDto;
+import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.auth.service.AuthService;
 import com.grocery.quickbasket.response.Response;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
@@ -77,7 +78,22 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register (@RequestBody RegisterReqDto registerReqDto) {
-        return Response.successResponse("Registration is successfully", userService.register(registerReqDto));
+        return Response.successResponse("Registration is successfully", authService.register(registerReqDto));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify (@RequestParam("token") String token) {
+        return Response.successResponse("Verification successfully", authService.verifyToken(token));
+    }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail (@RequestParam("email") String email) {
+        return Response.successResponse("Email is exist", userService.existsByEmail(email));
+    }
+
+    @PostMapping("/generate-token")
+    public ResponseEntity<?> exchangeToken (@RequestBody PayloadSocialLoginReqDto dto) {
+        return Response.successResponse("Generated JWT Token", authService.generateJwtSocialLogin(dto));
     }
 
 }
