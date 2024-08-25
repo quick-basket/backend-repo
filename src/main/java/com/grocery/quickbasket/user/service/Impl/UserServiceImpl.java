@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.user.service.Impl;
 
+import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.repository.UserRepository;
@@ -32,6 +33,18 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public User saveUserFromSocialLogin(PayloadSocialLoginReqDto payloadSocialLoginReqDto) {
+        User user = new User();
+        user.setEmail(payloadSocialLoginReqDto.getEmail());
+        user.setName(payloadSocialLoginReqDto.getName());
+        user.setIsVerified(true);
+        user.setImgProfile(payloadSocialLoginReqDto.getImageUrl());
+        userRepository.save(user);
+
+        return user;
     }
 
 }
