@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.productCategory.service.impl;
 
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.productCategory.entity.ProductCategory;
 import com.grocery.quickbasket.productCategory.repository.ProductCategoryRepository;
 import com.grocery.quickbasket.productCategory.service.ProductCategoryService;
@@ -29,7 +30,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
             categoryUpdate.setName(productCategory.getName());
             return productCategoryRepository.save(categoryUpdate);
         } else {
-            throw new RuntimeException("product category not found with id " + id);
+            throw new DataNotFoundException("product category not found with id " + id);
         }
     }
 
@@ -48,7 +49,7 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
         if (productCategoryRepository.existsById(id)) {
             productCategoryRepository.deleteById(id);
         } else {
-            throw new RuntimeException("product category not found with id " + id);
+            throw new DataNotFoundException("product category not found with id " + id);
         }
     }
 }
