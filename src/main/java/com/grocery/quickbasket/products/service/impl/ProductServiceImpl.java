@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.repository.InventoryRepository;
 import com.grocery.quickbasket.productCategory.entity.ProductCategory;
@@ -52,7 +53,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponseDto createProduct(ProductRequestDto productRequestDto) {
         ProductCategory category = productCategoryRepository.findById(productRequestDto.getCategoryId())
-            .orElseThrow(() -> new RuntimeException("category not found!"));
+            .orElseThrow(() -> new DataNotFoundException("category not found!"));
         Product product = new Product();
         product.setName(productRequestDto.getName());
         product.setDescription(productRequestDto.getDescription());
@@ -68,12 +69,12 @@ public class ProductServiceImpl implements ProductService {
 
                 long maxFileSize = 1 * 1024 * 1024;
                 if (file.getSize() > maxFileSize) {
-                    throw new RuntimeException("File size exceeds the maximum limit of 1MB");
+                    throw new DataNotFoundException("File size exceeds the maximum limit of 1MB");
                 }
 
                 String contentType = file.getContentType();
                 if (!("image/jpeg".equals(contentType) || "image/png".equals(contentType))) {
-                    throw new RuntimeException("Only JPG and PNG image types are allowed");
+                    throw new DataNotFoundException("Only JPG and PNG image types are allowed");
                 }
                 try {
                     Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
@@ -95,9 +96,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public String updateProduct(Long id, ProductRequestDto productRequestDto) {
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("product not found with id " + id));
+            .orElseThrow(() -> new DataNotFoundException("product not found with id " + id));
         ProductCategory category = productCategoryRepository.findById(productRequestDto.getCategoryId())
-            .orElseThrow(() -> new RuntimeException("category not found"));
+            .orElseThrow(() -> new DataNotFoundException("category not found"));
         product.setName(productRequestDto.getName());
         product.setDescription(productRequestDto.getDescription());
         product.setPrice(productRequestDto.getPrice());
@@ -115,12 +116,12 @@ public class ProductServiceImpl implements ProductService {
             for (MultipartFile file : productRequestDto.getImageFiles()) {
                 long maxFileSize = 1 * 1024 * 1024; // 1MB
                 if (file.getSize() > maxFileSize) {
-                    throw new RuntimeException("File size exceeds the maximum limit of 1MB");
+                    throw new DataNotFoundException("File size exceeds the maximum limit of 1MB");
                 }
 
                 String contentType = file.getContentType();
                 if (!("image/jpeg".equals(contentType) || "image/png".equals(contentType))) {
-                    throw new RuntimeException("Only JPG and PNG image types are allowed");
+                    throw new DataNotFoundException("Only JPG and PNG image types are allowed");
                 }
 
                 try {
@@ -143,11 +144,17 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponseDto getProductById(Long id) {
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("product not found"));
+            .orElseThrow(() -> new DataNotFoundException("product not found"));
         
         List<String> imageUrls = productImageRepository.findByProduct(product)
             .stream().map(ProductImage::getImageUrl)
             .collect(Collectors.toList());
+        Inventory inventory = inventoryRepository.findByProductId(product.getId())
+            .orElseGet(() -> {
+                Inventory inv = new Inventory();
+                inv.setQuantity(0);
+                return inv;
+            });
         ProductResponseDto responseDto = new ProductResponseDto();
         responseDto.setId(product.getId());
         responseDto.setName(product.getName());
@@ -156,6 +163,7 @@ public class ProductServiceImpl implements ProductService {
         responseDto.setCategoryId(product.getCategory().getId());
         responseDto.setCategoryName(product.getCategory().getName());
         responseDto.setImageUrls(imageUrls);
+        responseDto.setQuantity(inventory.getQuantity());
         responseDto.setCreatedAt(product.getCreatedAt());
         responseDto.setUpdatedAt(product.getUpdatedAt());
 

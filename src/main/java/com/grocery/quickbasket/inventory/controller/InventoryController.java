@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestDto;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestUpdateDto;
 import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
@@ -50,7 +51,7 @@ public class InventoryController {
         try {
             inventoryService.deleteInventory(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (RuntimeException e ) {
+        } catch (DataNotFoundException e ) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
