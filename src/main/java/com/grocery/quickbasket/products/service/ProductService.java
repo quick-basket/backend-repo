@@ -9,7 +9,7 @@ import com.grocery.quickbasket.products.dto.ProductResponseDto;
 public interface ProductService {
 
     ProductResponseDto createProduct (ProductRequestDto productRequestDto);
-    ProductResponseDto updateProduct (Long id, ProductRequestDto productRequestDto);
+    String updateProduct (Long id, ProductRequestDto productRequestDto);
     ProductResponseDto getProductById (Long id);
     List<ProductListResponseDto> getAllProducts();
     void deleteProduct(Long id);
