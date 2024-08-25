@@ -12,12 +12,6 @@ public class RegisterReqDto {
     @NotBlank(message = "Email cannot be empty")
     private String email;
 
-    @NotBlank(message = "You need to put password")
-    private String password;
-
-    @NotBlank(message = "You need to put the same password")
-    private String passwordMatch;
-
     @NotBlank(message = "Phone cannot be empty")
     private String phone;
 
@@ -25,8 +19,6 @@ public class RegisterReqDto {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
-        user.setPassword(password);
-        user.setPhone(phone);
         return user;
     }
 }
