@@ -48,4 +48,9 @@ public class GlobalExceptionsHandler {
 
         return Response.failedResponse(HttpStatus.BAD_REQUEST.value(), "Unable to process " + ex.getMessage(), ex.getClass().getName());
     }
+
+    @ExceptionHandler(DataNotFoundException.class) 
+    public final ResponseEntity<Response<String>> handleDaatNotFoundException(DataNotFoundException ex) {
+        return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
+    }
 }
