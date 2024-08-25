@@ -44,11 +44,13 @@ public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
     private final AuthService authService;
+    private final CorsConfigurationSourceImpl corsConfigurationSource;
 
-    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, @Lazy AuthService authService) {
+    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, @Lazy AuthService authService, CorsConfigurationSourceImpl corsConfigurationSource) {
         this.rsaConfigProperties = rsaConfigProperties;
         this.userDetailsService = userDetailsService;
         this.authService = authService;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
@@ -91,10 +93,10 @@ public class SecurityConfig {
 
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/v1/auth/**").permitAll();
                     auth.requestMatchers("/api/v1/products/**").permitAll();
@@ -133,20 +135,6 @@ public class SecurityConfig {
                 .httpBasic(Customizer.withDefaults())
                 .build();
 
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000"));
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PUT", "OPTIONS", "PATCH", "DELETE"));
-        corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.setExposedHeaders(List.of("Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
-        return source;
     }
 
 }
