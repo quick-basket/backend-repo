@@ -25,7 +25,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -88,7 +87,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, OAuth2AuthorizedClientService authorizedClientService) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
@@ -105,9 +104,6 @@ public class SecurityConfig {
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .oauth2Login(oauth2 -> {
-                    oauth2.successHandler(new CustomOAuth2SuccessHandler(authService, authorizedClientService));
-                })
                 .oauth2ResourceServer((oauth2) -> {
                     oauth2.jwt((jwt) -> jwt.decoder(jwtDecoder()));
                     oauth2.bearerTokenResolver((request) -> {
