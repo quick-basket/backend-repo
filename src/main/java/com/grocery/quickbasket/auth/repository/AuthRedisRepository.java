@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 @Repository
 public class AuthRedisRepository {
-    private static final String STRING_KEY_PREFIX = "quickbasket:verification:token:" ;
+    private static final String STRING_KEY_PREFIX = "quickbasket:verification:token:";
     private final ValueOperations<String, String> valueOps;
 
     public AuthRedisRepository(RedisTemplate<String, String> redisTemplate) {
@@ -16,14 +16,14 @@ public class AuthRedisRepository {
     }
 
     public void saveVerificationToken(String email, String verificationToken) {
-        valueOps.set(STRING_KEY_PREFIX+email, verificationToken, 1, TimeUnit.HOURS);
+        valueOps.set(STRING_KEY_PREFIX + verificationToken, email, 1, TimeUnit.HOURS);
     }
 
-    public String getVerificationToken(String email) {
-        return valueOps.get(STRING_KEY_PREFIX+email);
+    public String getEmail(String verificationToken) {
+        return valueOps.get(STRING_KEY_PREFIX + verificationToken);
     }
 
-    public void deleteVerificationToken(String email) {
-        valueOps.getOperations().delete(STRING_KEY_PREFIX+email);
+    public void deleteVerificationToken(String verificationToken) {
+        valueOps.getOperations().delete(STRING_KEY_PREFIX + verificationToken);
     }
 }
