@@ -47,4 +47,10 @@ public class UserServiceImpl implements UserService {
         return user;
     }
 
+    @Override
+    public boolean isUserSocialLogin(String email) {
+        User user = findByEmail(email);
+        return user != null && user.getPassword() == null && user.getIsVerified();
+    }
+
 }

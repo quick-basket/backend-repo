@@ -10,4 +10,5 @@ public interface UserService {
     void save(User user);
     boolean existsByEmail(String email);
     User saveUserFromSocialLogin(PayloadSocialLoginReqDto payloadSocialLoginReqDto);
+    boolean isUserSocialLogin(String email);
 }

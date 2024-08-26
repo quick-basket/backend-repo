@@ -2,10 +2,14 @@ package com.grocery.quickbasket.auth.service.Impl;
 
 import com.grocery.quickbasket.auth.dto.PasswordReqDto;
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
+import com.grocery.quickbasket.auth.dto.SocialLoginRespDto;
+import com.grocery.quickbasket.auth.repository.AuthRedisRepository;
 import com.grocery.quickbasket.auth.service.AuthService;
+import com.grocery.quickbasket.email.service.EmailService;
 import com.grocery.quickbasket.exceptions.EmailAlreadyExistException;
+import com.grocery.quickbasket.exceptions.PasswordNotMatchException;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
-import com.grocery.quickbasket.user.entity.TemporaryUser;
+import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.service.TemporaryUserService;
 import com.grocery.quickbasket.user.service.UserService;
@@ -13,14 +17,15 @@ import lombok.extern.java.Log;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,76 +37,89 @@ public class AuthServiceImpl implements AuthService {
     private final UserService userService;
     private final TemporaryUserService temporaryUserService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthRedisRepository authRedisRepository;
+    private final EmailService emailService;
 
-    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, TemporaryUserService temporaryUserService, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, TemporaryUserService temporaryUserService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService) {
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
         this.temporaryUserService = temporaryUserService;
         this.passwordEncoder = passwordEncoder;
+        this.authRedisRepository = authRedisRepository;
+        this.emailService = emailService;
     }
 
+    @Transactional
     @Override
-    public String register(RegisterReqDto registerReqDto) {
+    public RegisterRespDto register(RegisterReqDto registerReqDto) {
         if (userService.findByEmail(registerReqDto.getEmail()) != null) {
-            throw new EmailAlreadyExistException("email already exist");
+            if (userService.isUserSocialLogin(registerReqDto.getEmail())) {
+                log.info("EMAIL IS SOCIAL LOGIN" + registerReqDto.getEmail());
+                throw new EmailAlreadyExistException("This email is already registered with a social account. Please log in using your social account.");
+            }
+            throw new EmailAlreadyExistException("This email is already registered");
         }
 
-        String verificationToken = UUID.randomUUID().toString();
+        User newUser = new User();
+        newUser.setEmail(registerReqDto.getEmail());
+        newUser.setName(registerReqDto.getName());
+        newUser.setPhone(registerReqDto.getPhone());
+        newUser.setIsVerified(false);
+        userService.save(newUser);
 
-        TemporaryUser temporaryUser = new TemporaryUser(
-                registerReqDto.getEmail(),
-                registerReqDto.getName(),
-                registerReqDto.getPhone(),
-                verificationToken
-        );
-        log.info(temporaryUser.toString());
+        sendVerificationEmail(newUser);
 
-        temporaryUserService.saveTemporaryUser(temporaryUser);
-
-        return "Registration successful! = " + verificationToken;
+        RegisterRespDto respDto = new RegisterRespDto();
+        respDto.setEmail(newUser.getEmail());
+        respDto.setName(newUser.getName());
+        return respDto;
     }
 
     @Override
     public String generateToken(Authentication authentication) {
-        if (authentication.getPrincipal() instanceof OAuth2User) {
-            return generateOAuth2Token(authentication);
-        } else {
-            return generateStandardToken(authentication);
-        }
+        Instant now = Instant.now();
+        String scope = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.joining(" "));
+
+        Long userId = userService.findByEmail(authentication.getName()).getId();
+
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("quick-basket")
+                .issuedAt(now)
+                .expiresAt(now.plus(1, ChronoUnit.HOURS))
+                .subject(authentication.getName())  // Use username as the subject
+                .claim("scope", scope)
+                .claim("userId", userId)
+                .build();
+
+        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
 
     @Override
-    public String verifyToken(String token) {
-        TemporaryUser temporaryUser = temporaryUserService.getTemporaryUser(token);
+    public boolean verifyCode(String code) {
+        String email = authRedisRepository.getEmail(code);
 
-        if (temporaryUser == null) {
-            return "Invalid or expired verification Link";
-        }
-
-        User user = new User();
-        user.setEmail(temporaryUser.getEmail());
-        user.setName(temporaryUser.getName());
-        user.setPhone(temporaryUser.getPhone());
-
-        userService.save(user);
-
-        temporaryUserService.deleteTemporaryUser(token);
-
-        return "Email verified successfully! Please set your password to complete the registration.";
+        return email != null;
     }
 
     @Override
-    public String addPassword(String email, PasswordReqDto passwordReqDto) {
+    public String addPassword(PasswordReqDto passwordReqDto) {
+        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode());
+        log.info("EMAIL" + email);
+
+        if (!Objects.equals(passwordReqDto.getPassword(), passwordReqDto.getConfirmPassword())) {
+            throw new PasswordNotMatchException("Password not match");
+        }
+        log.info(passwordReqDto.toString());
         User user = userService.findByEmail(email);
-        if (user == null) {
-            return "User not found";
-        }
-
         user.setPassword(passwordEncoder.encode(passwordReqDto.getPassword()));
         userService.save(user);
 
-        return "Password added successfully";
+        authRedisRepository.deleteVerificationToken(passwordReqDto.getVerificationCode());
 
+        return "Password added successfully";
     }
 
     @Override
@@ -122,58 +140,32 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
-    private String generateOAuth2Token(Authentication authentication) {
-        OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        Instant now = Instant.now();
-        String scope = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(" "));
+    @Override
+    public SocialLoginRespDto googleSignIn(PayloadSocialLoginReqDto payloadSocialLoginReqDto) {
+        boolean exist = userService.existsByEmail(payloadSocialLoginReqDto.getEmail());
 
-        log.info("PRINCIPAL" + oAuth2User.toString());
-
-        String email = oAuth2User.getAttribute("email");
-        if (email == null) {
-            email = oAuth2User.getAttribute("notification_email");
+        SocialLoginRespDto socialLoginRespDto = new SocialLoginRespDto();
+        if (exist) {
+            String token = generateJwtSocialLogin(payloadSocialLoginReqDto);
+            socialLoginRespDto.setToken(token);
+            socialLoginRespDto.setStatus("success");
+        } else {
+            User newUser = userService.saveUserFromSocialLogin(payloadSocialLoginReqDto);
+            String token = generateJwtSocialLogin(payloadSocialLoginReqDto);
+            socialLoginRespDto.setStatus("new_user");
+            socialLoginRespDto.setToken(token);
         }
 
-        if (email == null) {
-            throw new RuntimeException("Email not found in OAuth2User attributes");
-        }
-
-        Long userId = userService.findByEmail(email).getId();
-
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("quick-basket")
-                .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS))
-                .subject(email)  // Use email as the subject
-                .claim("scope", scope)
-                .claim("userId", userId)
-                .build();
-
-        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+        return socialLoginRespDto;
     }
 
-    private String generateStandardToken(Authentication authentication) {
-        Instant now = Instant.now();
-        String scope = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(" "));
+    @Override
+    public void sendVerificationEmail(User user) {
+        String verificationCode = UUID.randomUUID().toString();
+        String verificationLink = "http://localhost:3000/verify?code=" + verificationCode;
 
-        Long userId = userService.findByEmail(authentication.getName()).getId();
-
-        JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("quick-basket")
-                .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS))
-                .subject(authentication.getName())  // Use username as the subject
-                .claim("scope", scope)
-                .claim("userId", userId)
-                .build();
-
-        return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+        authRedisRepository.saveVerificationToken(user.getEmail(), verificationCode);
+        emailService.sendVerificationEmail(user.getEmail(), verificationLink);
     }
 }
 
