@@ -22,6 +22,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(EmailNotExistException.class)
+    public final ResponseEntity<?> handleEmailNotExistException(EmailNotExistException ex){
+        return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public final ResponseEntity<Response<String>> handleValidationExceptions(MethodArgumentNotValidException ex){
         log.error(ex.getMessage(), ex);

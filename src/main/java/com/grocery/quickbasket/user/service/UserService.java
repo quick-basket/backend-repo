@@ -5,6 +5,7 @@ import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.entity.User;
 
 public interface UserService {
-    RegisterRespDto register(RegisterReqDto registerReqDto);
     User findByEmail(String email);
+    void save(User user);
+    boolean existsByEmail(String email);
 }
