@@ -52,6 +52,9 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Override
     public ProductResponseDto createProduct(ProductRequestDto productRequestDto) {
+        if(productRepository.existsByName(productRequestDto.getName())) {
+            throw new DataNotFoundException("product name already exists");
+        }
         ProductCategory category = productCategoryRepository.findById(productRequestDto.getCategoryId())
             .orElseThrow(() -> new DataNotFoundException("category not found!"));
         Product product = new Product();

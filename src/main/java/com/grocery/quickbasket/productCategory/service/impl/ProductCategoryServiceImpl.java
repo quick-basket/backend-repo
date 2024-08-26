@@ -19,6 +19,9 @@ public class ProductCategoryServiceImpl implements ProductCategoryService {
     }
     @Override
     public ProductCategory createProductCategory(ProductCategory productCategory) {
+        if (productCategoryRepository.existsByName(productCategory.getName())) {
+            throw new DataNotFoundException("Product category name already exists");
+        }
         return productCategoryRepository.save(productCategory);
     }
 
