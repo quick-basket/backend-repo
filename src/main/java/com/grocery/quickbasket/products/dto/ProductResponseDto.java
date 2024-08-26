@@ -19,6 +19,7 @@ public class ProductResponseDto {
     private Long categoryId;
     private String categoryName;
     private List<String> imageUrls;
+    private Integer quantity;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

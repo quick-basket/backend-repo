@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.productCategory.controller;
 
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.productCategory.entity.ProductCategory;
 import com.grocery.quickbasket.productCategory.service.ProductCategoryService;
 
@@ -46,11 +47,11 @@ public class ProductCategoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductCategory> updateProductCategory(@PathVariable Long id, ProductCategory productCategory) {
+    public ResponseEntity<ProductCategory> updateProductCategory(@PathVariable Long id, @RequestBody ProductCategory productCategory) {
         try {
             ProductCategory updatedCategory = productCategoryService.updateProductCategory(id, productCategory);
             return new ResponseEntity<>(updatedCategory, HttpStatus.OK);
-        } catch (RuntimeException e) {
+        } catch (DataNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
@@ -60,7 +61,7 @@ public class ProductCategoryController {
         try {
             productCategoryService.deleteProductCategory(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (RuntimeException e ) {
+        } catch (DataNotFoundException e ) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
