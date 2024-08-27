@@ -14,6 +14,8 @@ import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.repository.InventoryRepository;
 import com.grocery.quickbasket.inventory.service.InventoryService;
+import com.grocery.quickbasket.inventoryJournals.entity.InventoryJournal;
+import com.grocery.quickbasket.inventoryJournals.repository.InventoryJournalRepository;
 import com.grocery.quickbasket.products.entity.Product;
 import com.grocery.quickbasket.products.repository.ProductRepository;
 import com.grocery.quickbasket.store.entity.Store;
@@ -25,11 +27,13 @@ public class InventoryServiceImpl implements InventoryService{
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
+    private final InventoryJournalRepository inventoryJournalRepository;
     
-    public InventoryServiceImpl (InventoryRepository inventoryRepository, ProductRepository productRepository, StoreRepository storeRepository) {
+    public InventoryServiceImpl (InventoryRepository inventoryRepository, ProductRepository productRepository, StoreRepository storeRepository, InventoryJournalRepository inventoryJournalRepository) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository= productRepository;
         this.storeRepository = storeRepository;
+        this.inventoryJournalRepository = inventoryJournalRepository;
     }
 
     @Override
@@ -42,7 +46,13 @@ public class InventoryServiceImpl implements InventoryService{
         inventory.setProduct(product);
         inventory.setStore(store);
         inventory.setQuantity(inventoryRequestDto.getQuantity());
-        inventoryRepository.save(inventory);
+        Inventory savedInventory = inventoryRepository.save(inventory);
+
+        InventoryJournal journal = new InventoryJournal();
+        journal.setInventory(savedInventory);
+        journal.setQuantityChange(inventoryRequestDto.getQuantity());
+        inventoryJournalRepository.save(journal);
+
         return InventoryResponseDto.mapToDto(inventory);
     }
 
