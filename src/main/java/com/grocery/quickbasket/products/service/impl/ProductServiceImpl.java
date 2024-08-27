@@ -52,6 +52,9 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     @Override
     public ProductResponseDto createProduct(ProductRequestDto productRequestDto) {
+        if(productRepository.existsByName(productRequestDto.getName())) {
+            throw new DataNotFoundException("product name already exists");
+        }
         ProductCategory category = productCategoryRepository.findById(productRequestDto.getCategoryId())
             .orElseThrow(() -> new DataNotFoundException("category not found!"));
         Product product = new Product();
@@ -149,24 +152,13 @@ public class ProductServiceImpl implements ProductService {
         List<String> imageUrls = productImageRepository.findByProduct(product)
             .stream().map(ProductImage::getImageUrl)
             .collect(Collectors.toList());
-        Inventory inventory = inventoryRepository.findByProductId(product.getId())
-            .orElseGet(() -> {
-                Inventory inv = new Inventory();
-                inv.setQuantity(0);
-                return inv;
-            });
-        ProductResponseDto responseDto = new ProductResponseDto();
-        responseDto.setId(product.getId());
-        responseDto.setName(product.getName());
-        responseDto.setDescription(product.getDescription());
-        responseDto.setPrice(product.getPrice());
-        responseDto.setCategoryId(product.getCategory().getId());
-        responseDto.setCategoryName(product.getCategory().getName());
+        List<Inventory> inventories = inventoryRepository.findByProductId(product.getId());
+        int totalQuantity = inventories.stream()
+            .mapToInt(Inventory::getQuantity)
+            .sum();
+        ProductResponseDto responseDto = ProductResponseDto.mapToDto(product);
         responseDto.setImageUrls(imageUrls);
-        responseDto.setQuantity(inventory.getQuantity());
-        responseDto.setCreatedAt(product.getCreatedAt());
-        responseDto.setUpdatedAt(product.getUpdatedAt());
-
+        responseDto.setQuantity(totalQuantity);
         return responseDto;
     }
 
@@ -194,14 +186,11 @@ public class ProductServiceImpl implements ProductService {
             dto.setImageUrls(imageUrls);
             dto.setImageIds(imageIds);
 
-            Inventory inventory = inventoryRepository.findByProductId(product.getId())
-                .orElseGet(() -> {
-                    Inventory inv = new Inventory();
-                    inv.setQuantity(0);
-                    return inv;
-                });
-            dto.setQuantity(inventory.getQuantity());
-
+            List<Inventory> inventories = inventoryRepository.findByProductId(product.getId());
+            int totalQuantity = inventories.stream()
+                .mapToInt(Inventory::getQuantity)
+                .sum();
+            dto.setQuantity(totalQuantity);
             responseDtos.add(dto);
         }
         return responseDtos;
@@ -211,4 +200,5 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long id) {
         productRepository.deleteById(id);
     }
+
 }

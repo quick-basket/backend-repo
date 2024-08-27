@@ -103,6 +103,7 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/v1/category/**").permitAll();
                     auth.requestMatchers("/api/v1/stores/**").permitAll();
                     auth.requestMatchers("/api/v1/inventory/**").permitAll();
+                    auth.requestMatchers("/api/v1/discounts/**").permitAll();
                     /*
                     Kalau mau tambahin Role Based access
                     example:

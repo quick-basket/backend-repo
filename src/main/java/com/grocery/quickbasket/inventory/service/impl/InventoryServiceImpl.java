@@ -1,11 +1,13 @@
 package com.grocery.quickbasket.inventory.service.impl;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
+import com.grocery.quickbasket.inventory.dto.InventoryListResponseDto;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestDto;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestUpdateDto;
 import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
@@ -74,6 +76,14 @@ public class InventoryServiceImpl implements InventoryService{
         } else {
             throw new DataNotFoundException("product category not found with id " + id);
         }
+    }
+
+    @Override
+    public List<InventoryListResponseDto> getInventoryByStoreId(Long storeId) {
+        List<Inventory> inventories = inventoryRepository.findByStoreId(storeId);
+        return inventories.stream() 
+            .map(InventoryListResponseDto::mapToDto)
+            .collect(Collectors.toList());
     }
 
 }

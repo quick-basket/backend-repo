@@ -60,7 +60,7 @@ public class GlobalExceptionsHandler {
     }
 
     @ExceptionHandler(DataNotFoundException.class) 
-    public final ResponseEntity<Response<String>> handleDaatNotFoundException(DataNotFoundException ex) {
+    public final ResponseEntity<Response<String>> handleDataNotFoundException(DataNotFoundException ex) {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 }
