@@ -27,6 +27,16 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(PasswordNotMatchException.class)
+    public final ResponseEntity<?> handlePasswordNotMatch(PasswordNotMatchException ex){
+        return Response.failedResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistException.class)
+    public final ResponseEntity<?> handleEmailAlreadyExistException(EmailAlreadyExistException ex){
+        return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public final ResponseEntity<Response<String>> handleValidationExceptions(MethodArgumentNotValidException ex){
         log.error(ex.getMessage(), ex);
@@ -50,7 +60,7 @@ public class GlobalExceptionsHandler {
     }
 
     @ExceptionHandler(DataNotFoundException.class) 
-    public final ResponseEntity<Response<String>> handleDaatNotFoundException(DataNotFoundException ex) {
+    public final ResponseEntity<Response<String>> handleDataNotFoundException(DataNotFoundException ex) {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 }

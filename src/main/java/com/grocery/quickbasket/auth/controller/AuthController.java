@@ -2,10 +2,13 @@ package com.grocery.quickbasket.auth.controller;
 
 import com.grocery.quickbasket.auth.dto.LoginReqDto;
 import com.grocery.quickbasket.auth.dto.LoginRespDto;
+import com.grocery.quickbasket.auth.dto.PasswordReqDto;
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.auth.service.AuthService;
+import com.grocery.quickbasket.email.service.EmailService;
 import com.grocery.quickbasket.response.Response;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
+import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,11 +30,13 @@ public class AuthController {
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
+    private final EmailService emailService;
 
-    public AuthController(AuthService authService, AuthenticationManager authenticationManager, UserService userService) {
+    public AuthController(AuthService authService, AuthenticationManager authenticationManager, UserService userService, EmailService emailService) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.userService = userService;
+        this.emailService = emailService;
     }
 
     @PostMapping("/login")
@@ -83,7 +88,7 @@ public class AuthController {
 
     @GetMapping("/verify")
     public ResponseEntity<?> verify (@RequestParam("token") String token) {
-        return Response.successResponse("Verification successfully", authService.verifyToken(token));
+        return Response.successResponse("Verification successfully", authService.verifyCode(token));
     }
 
     @GetMapping("/check-email")
@@ -94,6 +99,16 @@ public class AuthController {
     @PostMapping("/generate-token")
     public ResponseEntity<?> exchangeToken (@RequestBody PayloadSocialLoginReqDto dto) {
         return Response.successResponse("Generated JWT Token", authService.generateJwtSocialLogin(dto));
+    }
+
+    @PostMapping("/google-signin")
+    public ResponseEntity<?> googleSignin (@RequestBody PayloadSocialLoginReqDto dto) {
+        return Response.successResponse("Login successfully", authService.googleSignIn(dto));
+    }
+
+    @PostMapping("/set-password")
+    public ResponseEntity<?> setPassword (@RequestBody PasswordReqDto dto) {
+        return Response.successResponse("Set password successfull", authService.addPassword(dto));
     }
 
 }
