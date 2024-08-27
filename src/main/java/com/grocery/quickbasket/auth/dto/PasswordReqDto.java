@@ -6,4 +6,5 @@ import lombok.Data;
 public class PasswordReqDto {
     private String password;
     private String confirmPassword;
+    private String verificationCode;
 }

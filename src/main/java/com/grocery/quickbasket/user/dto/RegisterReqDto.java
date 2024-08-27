@@ -15,10 +15,4 @@ public class RegisterReqDto {
     @NotBlank(message = "Phone cannot be empty")
     private String phone;
 
-    public User toEntity(){
-        User user = new User();
-        user.setName(name);
-        user.setEmail(email);
-        return user;
-    }
 }
