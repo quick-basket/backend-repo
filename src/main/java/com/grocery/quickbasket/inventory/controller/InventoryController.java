@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
+import com.grocery.quickbasket.inventory.dto.InventoryListResponseDto;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestDto;
 import com.grocery.quickbasket.inventory.dto.InventoryRequestUpdateDto;
 import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
@@ -38,6 +39,12 @@ public class InventoryController {
     public ResponseEntity<List<Inventory>> getAllInventory() {
         List<Inventory> inventories = inventoryService.getAllProductCategory();
         return new ResponseEntity<>(inventories, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<List<InventoryListResponseDto>> getInventoryByStoreId(@PathVariable Long storeId) {
+        List<InventoryListResponseDto> inventoryList = inventoryService.getInventoryByStoreId(storeId);
+        return ResponseEntity.ok(inventoryList);
     }
 
     @PutMapping("/{id}")

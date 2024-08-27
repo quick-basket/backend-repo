@@ -2,10 +2,13 @@ package com.grocery.quickbasket.discounts.service.impl;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.grocery.quickbasket.discounts.dto.DiscountListResponseDto;
 import com.grocery.quickbasket.discounts.dto.DiscountRequestDto;
+import com.grocery.quickbasket.discounts.dto.DiscountResponseDto;
 import com.grocery.quickbasket.discounts.entity.Discount;
 import com.grocery.quickbasket.discounts.repository.DiscountRepository;
 import com.grocery.quickbasket.discounts.service.DiscountService;
@@ -29,8 +32,13 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     @Override
-    public List<Discount> getAllDiscounts() {
-        return discountRepository.findAll();
+    public List<DiscountListResponseDto> getAllDiscounts() {
+        List<Discount> discounts = discountRepository.findAll();
+        List<DiscountListResponseDto> discountDtos = discounts.stream()
+            .map(DiscountListResponseDto::fromEntity)
+            .collect(Collectors.toList());
+
+        return discountDtos; 
     }
 
     @Override
@@ -39,7 +47,7 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     @Override
-    public Discount createDiscount(DiscountRequestDto requestDto) {
+    public DiscountResponseDto createDiscount(DiscountRequestDto requestDto) {
         Store store = storeRepository.findById(requestDto.getStoreId())
             .orElseThrow(() -> new DataNotFoundException("Store not found for this id :: " + requestDto.getStoreId()));
         Product product = productRepository.findById(requestDto.getProductId())
@@ -51,23 +59,42 @@ public class DiscountServiceImpl implements DiscountService {
         discount.setType(requestDto.getTypeAsEnum());
         discount.setValue(requestDto.getValue());
         discount.setMinPurchase(requestDto.getMinPurchase());
-        discount.setMinPurchase(requestDto.getMaxDiscount());
+        discount.setMaxDiscount(requestDto.getMaxDiscount());
         discount.setStartDate(requestDto.getStartDate());
         discount.setEndDate(requestDto.getEndDate());
+        Discount savedDiscount = discountRepository.save(discount);
 
-        return discountRepository.save(discount);
+        return DiscountResponseDto.formDiscount(savedDiscount);
     }
 
     @Override
-    public Discount updateDiscount(Long id, Discount discount) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateDiscount'");
+    public DiscountResponseDto updateDiscount(Long id, DiscountRequestDto requestDto) {
+        Discount existingDiscount = discountRepository.findById(id)
+            .orElseThrow(() -> new DataNotFoundException("Store not found for this id :: " + id));
+        Store store = storeRepository.findById(requestDto.getStoreId())
+            .orElseThrow(() -> new DataNotFoundException("Store not found for this id :: " + requestDto.getStoreId()));
+        Product product = productRepository.findById(requestDto.getProductId())
+            .orElseThrow(() -> new DataNotFoundException("Store not found for this id :: " + requestDto.getProductId()));
+        
+        existingDiscount.setStore(store);
+        existingDiscount.setProduct(product);
+        existingDiscount.setType(requestDto.getTypeAsEnum());
+        existingDiscount.setValue(requestDto.getValue());
+        existingDiscount.setMinPurchase(requestDto.getMinPurchase());
+        existingDiscount.setMaxDiscount(requestDto.getMaxDiscount());
+        existingDiscount.setStartDate(requestDto.getStartDate());
+        existingDiscount.setEndDate(requestDto.getEndDate());
+        Discount updatedDiscount = discountRepository.save(existingDiscount);
+
+        return DiscountResponseDto.formDiscount(updatedDiscount);
+
     }
 
     @Override
     public void deleteDiscount(Long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteDiscount'");
+        Discount existingDiscountt = discountRepository.findById(id)
+            .orElseThrow(() -> new DataNotFoundException("Discount not found for this id :: " + id));
+        discountRepository.delete(existingDiscountt);
     }
 
 }
