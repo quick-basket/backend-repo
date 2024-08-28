@@ -7,6 +7,7 @@ import com.grocery.quickbasket.auth.repository.AuthRedisRepository;
 import com.grocery.quickbasket.auth.service.AuthService;
 import com.grocery.quickbasket.email.service.EmailService;
 import com.grocery.quickbasket.exceptions.EmailAlreadyExistException;
+import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.exceptions.PasswordNotMatchException;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
@@ -67,7 +68,7 @@ public class AuthServiceImpl implements AuthService {
         newUser.setIsVerified(false);
         userService.save(newUser);
 
-        sendVerificationEmail(newUser);
+        sendVerificationEmail(newUser.getEmail(), AuthRedisRepository.REGISTRATION_PREFIX, "verify");
 
         RegisterRespDto respDto = new RegisterRespDto();
         respDto.setEmail(newUser.getEmail());
@@ -98,16 +99,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public boolean verifyCode(String code) {
-        String email = authRedisRepository.getEmail(code);
+    public boolean verifyCode(String code, String prefix) {
+        String email = authRedisRepository.getEmail(code, prefix);
 
         return email != null;
     }
 
     @Override
     public String addPassword(PasswordReqDto passwordReqDto) {
-        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode());
-        log.info("EMAIL" + email);
+        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode(), AuthRedisRepository.REGISTRATION_PREFIX);
 
         if (!Objects.equals(passwordReqDto.getPassword(), passwordReqDto.getConfirmPassword())) {
             throw new PasswordNotMatchException("Password not match");
@@ -117,7 +117,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPassword(passwordEncoder.encode(passwordReqDto.getPassword()));
         userService.save(user);
 
-        authRedisRepository.deleteVerificationToken(passwordReqDto.getVerificationCode());
+        authRedisRepository.deleteVerificationToken(passwordReqDto.getVerificationCode(), AuthRedisRepository.REGISTRATION_PREFIX);
 
         return "Password added successfully";
     }
@@ -160,12 +160,47 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void sendVerificationEmail(User user) {
+    public void sendVerificationEmail(String email, String prefix, String linkType) {
         String verificationCode = UUID.randomUUID().toString();
-        String verificationLink = "http://localhost:3000/verify?code=" + verificationCode;
+        String verificationLink = "http://localhost:3000/" + linkType + "?code=" + verificationCode;
 
-        authRedisRepository.saveVerificationToken(user.getEmail(), verificationCode);
-        emailService.sendVerificationEmail(user.getEmail(), verificationLink);
+        authRedisRepository.saveVerificationToken(email, verificationCode, prefix);
+        emailService.sendEmail(email, verificationLink);
+    }
+
+    @Override
+    public String checkUserResetPassword(String email) {
+        User user = userService.findByEmail(email);
+
+        if (user == null) {
+            throw new EmailNotExistException("email not exist");
+        }
+
+        sendVerificationEmail(email, AuthRedisRepository.RESET_PREFIX, "reset-password");
+
+        return "Email verification has been send to your email";
+    }
+
+    @Override
+    public String resetPassword(PasswordReqDto passwordReqDto) {
+        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode(), AuthRedisRepository.REGISTRATION_PREFIX);
+
+        User user = userService.findByEmail(email);
+        if (user == null){
+            throw new EmailNotExistException("Email not exist");
+        }
+
+        if (!Objects.equals(passwordReqDto.getPassword(), passwordReqDto.getConfirmPassword())) {
+            throw new PasswordNotMatchException("Password not match");
+        }
+
+        user.setPassword(passwordEncoder.encode(passwordReqDto.getPassword()));
+        userService.save(user);
+
+        authRedisRepository.deleteVerificationToken(passwordReqDto.getVerificationCode(), AuthRedisRepository.RESET_PREFIX);
+
+        return "Password successfully reset";
+
     }
 }
 

@@ -15,7 +15,7 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendVerificationEmail(String to, String verificationLink) {
+    public void sendEmail(String to, String verificationLink) {
         MimeMessage mimeMessage = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);

@@ -4,6 +4,7 @@ import com.grocery.quickbasket.auth.dto.LoginReqDto;
 import com.grocery.quickbasket.auth.dto.LoginRespDto;
 import com.grocery.quickbasket.auth.dto.PasswordReqDto;
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
+import com.grocery.quickbasket.auth.repository.AuthRedisRepository;
 import com.grocery.quickbasket.auth.service.AuthService;
 import com.grocery.quickbasket.email.service.EmailService;
 import com.grocery.quickbasket.response.Response;
@@ -86,9 +87,14 @@ public class AuthController {
         return Response.successResponse("Registration is successfully", authService.register(registerReqDto));
     }
 
-    @GetMapping("/verify")
+    @GetMapping("/verify/registration")
     public ResponseEntity<?> verify (@RequestParam("token") String token) {
-        return Response.successResponse("Verification successfully", authService.verifyCode(token));
+        return Response.successResponse("Verification successfully", authService.verifyCode(token, AuthRedisRepository.REGISTRATION_PREFIX));
+    }
+
+    @GetMapping("/password-reset/verify")
+    public ResponseEntity<?> verifyResetPassword (@RequestParam("token") String token) {
+        return Response.successResponse("Verification successfully", authService.verifyCode(token, AuthRedisRepository.RESET_PREFIX));
     }
 
     @GetMapping("/check-email")
@@ -109,6 +115,16 @@ public class AuthController {
     @PostMapping("/set-password")
     public ResponseEntity<?> setPassword (@RequestBody PasswordReqDto dto) {
         return Response.successResponse("Set password successfull", authService.addPassword(dto));
+    }
+
+    @PostMapping("/password-reset")
+    public ResponseEntity<?> resetPassword (@RequestBody PasswordReqDto dto) {
+        return Response.successResponse("Reset password successfully", authService.resetPassword(dto));
+    }
+
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<?> passwordResetRequest (@RequestParam String email) {
+        return Response.successResponse("Check your email for verification link", authService.checkUserResetPassword(email));
     }
 
 }
