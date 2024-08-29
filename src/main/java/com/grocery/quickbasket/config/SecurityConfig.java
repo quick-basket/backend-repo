@@ -1,8 +1,5 @@
 package com.grocery.quickbasket.config;
 
-import com.grocery.quickbasket.auth.service.AuthService;
-import com.grocery.quickbasket.user.service.UserService;
-import java.util.List;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -13,7 +10,6 @@ import jakarta.servlet.http.Cookie;
 import lombok.extern.java.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,9 +27,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 @Configuration
@@ -43,13 +36,11 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
-    private final AuthService authService;
     private final CorsConfigurationSourceImpl corsConfigurationSource;
 
-    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, @Lazy AuthService authService, CorsConfigurationSourceImpl corsConfigurationSource) {
+    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, CorsConfigurationSourceImpl corsConfigurationSource) {
         this.rsaConfigProperties = rsaConfigProperties;
         this.userDetailsService = userDetailsService;
-        this.authService = authService;
         this.corsConfigurationSource = corsConfigurationSource;
     }
 

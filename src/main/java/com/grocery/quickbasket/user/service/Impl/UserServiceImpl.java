@@ -1,7 +1,6 @@
 package com.grocery.quickbasket.user.service.Impl;
 
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
-import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.user.service.UserService;
