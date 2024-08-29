@@ -5,7 +5,6 @@ import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.auth.dto.SocialLoginRespDto;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
-import com.grocery.quickbasket.user.entity.User;
 import org.springframework.security.core.Authentication;
 
 public interface AuthService {

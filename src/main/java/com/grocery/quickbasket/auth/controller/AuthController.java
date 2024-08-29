@@ -6,10 +6,8 @@ import com.grocery.quickbasket.auth.dto.PasswordReqDto;
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.auth.repository.AuthRedisRepository;
 import com.grocery.quickbasket.auth.service.AuthService;
-import com.grocery.quickbasket.email.service.EmailService;
 import com.grocery.quickbasket.response.Response;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
-import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,13 +29,11 @@ public class AuthController {
     private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
-    private final EmailService emailService;
 
-    public AuthController(AuthService authService, AuthenticationManager authenticationManager, UserService userService, EmailService emailService) {
+    public AuthController(AuthService authService, AuthenticationManager authenticationManager, UserService userService) {
         this.authService = authService;
         this.authenticationManager = authenticationManager;
         this.userService = userService;
-        this.emailService = emailService;
     }
 
     @PostMapping("/login")
@@ -123,7 +119,7 @@ public class AuthController {
     }
 
     @PostMapping("/password-reset/request")
-    public ResponseEntity<?> passwordResetRequest (@RequestParam String email) {
+    public ResponseEntity<?> passwordResetRequest (@RequestParam("email") String email) {
         return Response.successResponse("Check your email for verification link", authService.checkUserResetPassword(email));
     }
 

@@ -12,7 +12,6 @@ import com.grocery.quickbasket.exceptions.PasswordNotMatchException;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.entity.User;
-import com.grocery.quickbasket.user.service.TemporaryUserService;
 import com.grocery.quickbasket.user.service.UserService;
 import lombok.extern.java.Log;
 import org.springframework.security.core.Authentication;
@@ -36,15 +35,13 @@ public class AuthServiceImpl implements AuthService {
 
     private final JwtEncoder jwtEncoder;
     private final UserService userService;
-    private final TemporaryUserService temporaryUserService;
     private final PasswordEncoder passwordEncoder;
     private final AuthRedisRepository authRedisRepository;
     private final EmailService emailService;
 
-    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, TemporaryUserService temporaryUserService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService) {
+    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService) {
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
-        this.temporaryUserService = temporaryUserService;
         this.passwordEncoder = passwordEncoder;
         this.authRedisRepository = authRedisRepository;
         this.emailService = emailService;
@@ -183,7 +180,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String resetPassword(PasswordReqDto passwordReqDto) {
-        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode(), AuthRedisRepository.REGISTRATION_PREFIX);
+        String email = authRedisRepository.getEmail(passwordReqDto.getVerificationCode(), AuthRedisRepository.RESET_PREFIX);
 
         User user = userService.findByEmail(email);
         if (user == null){
