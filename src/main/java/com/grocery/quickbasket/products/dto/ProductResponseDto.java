@@ -1,7 +1,7 @@
 package com.grocery.quickbasket.products.dto;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import java.util.List;
 
@@ -20,8 +20,8 @@ public class ProductResponseDto {
     private String categoryName;
     private List<String> imageUrls;
     private Integer quantity;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public static ProductResponseDto mapToDto (Product product ) {
         ProductResponseDto dto = new ProductResponseDto();

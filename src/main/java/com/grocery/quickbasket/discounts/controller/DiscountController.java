@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grocery.quickbasket.discounts.dto.DiscountListResponseDto;
 import com.grocery.quickbasket.discounts.dto.DiscountRequestDto;
 import com.grocery.quickbasket.discounts.dto.DiscountResponseDto;
-import com.grocery.quickbasket.discounts.entity.Discount;
 import com.grocery.quickbasket.discounts.service.DiscountService;
 
 @RestController

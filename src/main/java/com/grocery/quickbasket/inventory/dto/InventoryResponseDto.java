@@ -1,6 +1,6 @@
 package com.grocery.quickbasket.inventory.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import com.grocery.quickbasket.inventory.entity.Inventory;
 
@@ -13,8 +13,8 @@ public class InventoryResponseDto {
     private String productName;
     private String storeName;
     private Integer quantity;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     public static InventoryResponseDto mapToDto (Inventory inventory) {
         InventoryResponseDto dto = new InventoryResponseDto();
