@@ -20,6 +20,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(UserIdNotFoundException.class)
+    public final ResponseEntity<Response<String>> handleUserIdNotFoundException(UserIdNotFoundException ex){
+        return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(EmailNotExistException.class)
     public final ResponseEntity<?> handleEmailNotExistException(EmailNotExistException ex){
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);

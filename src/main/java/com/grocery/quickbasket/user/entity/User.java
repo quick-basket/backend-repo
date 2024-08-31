@@ -38,7 +38,7 @@ public class User {
 
     @ColumnDefault("false")
     @Column(name = "is_verified")
-    private Boolean isVerified;
+    private Boolean isVerified = false;
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "created_at")
