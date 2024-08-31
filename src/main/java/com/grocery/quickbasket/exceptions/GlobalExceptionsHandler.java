@@ -20,6 +20,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(StoreNotFoundException.class)
+    public final ResponseEntity<Response<String>> handleStoreNotFoundException(StoreNotFoundException ex){
+        return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(UserIdNotFoundException.class)
     public final ResponseEntity<Response<String>> handleUserIdNotFoundException(UserIdNotFoundException ex){
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
