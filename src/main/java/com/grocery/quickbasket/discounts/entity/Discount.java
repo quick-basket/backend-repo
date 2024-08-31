@@ -5,8 +5,7 @@ import java.time.Instant;
 
 import org.hibernate.annotations.ColumnDefault;
 
-import com.grocery.quickbasket.products.entity.Product;
-import com.grocery.quickbasket.store.entity.Store;
+import com.grocery.quickbasket.inventory.entity.Inventory;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -37,12 +36,8 @@ public class Discount {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id", nullable = false)
-    private Store store;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    @JoinColumn(name = "inventory_id", nullable = false)
+    private Inventory inventory;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
