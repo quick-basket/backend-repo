@@ -3,6 +3,8 @@ package com.grocery.quickbasket.user.service;
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
+import com.grocery.quickbasket.user.dto.UpdateUserDto;
+import com.grocery.quickbasket.user.dto.UserDto;
 import com.grocery.quickbasket.user.entity.User;
 
 public interface UserService {
@@ -11,4 +13,6 @@ public interface UserService {
     boolean existsByEmail(String email);
     User saveUserFromSocialLogin(PayloadSocialLoginReqDto payloadSocialLoginReqDto);
     boolean isUserSocialLogin(String email);
+    UserDto getUserProfile();
+    UserDto updateUserProfile(UpdateUserDto dto);
 }

@@ -1,0 +1,38 @@
+package com.grocery.quickbasket.store.dto;
+
+import com.grocery.quickbasket.store.entity.Store;
+import lombok.Data;
+import org.springframework.beans.BeanUtils;
+
+@Data
+public class StoreDto {
+    private Long id;
+    private String name;
+    private String address;
+    private String city;
+    private String province;
+    private String postalCode;
+    private float latitude;
+    private float longitude;
+
+    public static StoreDto fromEntity(Store store) {
+        StoreDto dto = new StoreDto();
+        BeanUtils.copyProperties(store, dto);
+        return dto;
+//        StoreDto dto = new StoreDto();
+//        dto.setName(store.getName());
+//        dto.setAddress(store.getAddress());
+//        dto.setCity(store.getCity());
+//        dto.setProvince(store.getProvince());
+//        dto.setPostalCode(store.getPostalCode());
+//        dto.setLatitude(store.getLatitude());
+//        dto.setLongitude(store.getLongitude());
+//        return dto;
+    }
+
+    public static Store toEntity(StoreDto dto) {
+        Store store = new Store();
+        BeanUtils.copyProperties(dto, store);
+        return store;
+    }
+}
