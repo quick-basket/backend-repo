@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grocery.quickbasket.discounts.dto.DiscountListResponseDto;
 import com.grocery.quickbasket.discounts.dto.DiscountRequestDto;
 import com.grocery.quickbasket.discounts.dto.DiscountResponseDto;
-import com.grocery.quickbasket.discounts.entity.Discount;
 import com.grocery.quickbasket.discounts.service.DiscountService;
 
 @RestController
@@ -40,9 +39,9 @@ public class DiscountController {
         return ResponseEntity.ok(updatedDiscount);
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllDiscount() {
-        List<DiscountListResponseDto> discounts = discountService.getAllDiscounts();
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<?> getAllDiscount(@PathVariable Long storeId) {
+        List<DiscountListResponseDto> discounts = discountService.getAllDiscountsByStoreId(storeId);
         return ResponseEntity.ok(discounts);
     }
 }

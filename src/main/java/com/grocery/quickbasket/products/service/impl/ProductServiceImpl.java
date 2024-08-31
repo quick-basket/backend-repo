@@ -23,10 +23,8 @@ import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.entity.Product;
 import com.grocery.quickbasket.products.repository.ProductRepository;
 import com.grocery.quickbasket.products.service.ProductService;
-import com.grocery.quickbasket.store.entity.Store;
-import com.grocery.quickbasket.store.repository.StoreRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.io.IOException;
 
@@ -38,15 +36,13 @@ public class ProductServiceImpl implements ProductService {
     private final Cloudinary cloudinary;
     private final ProductImageRepository productImageRepository;
     private final InventoryRepository inventoryRepository;
-    private final StoreRepository storeRepository;
 
-    public ProductServiceImpl (ProductRepository productRepository, ProductCategoryRepository productCategoryRepository, Cloudinary cloudinary, ProductImageRepository productImageRepository, InventoryRepository inventoryRepository, StoreRepository storeRepository) {
+    public ProductServiceImpl (ProductRepository productRepository, ProductCategoryRepository productCategoryRepository, Cloudinary cloudinary, ProductImageRepository productImageRepository, InventoryRepository inventoryRepository) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.cloudinary = cloudinary;
         this.productImageRepository = productImageRepository;
         this.inventoryRepository = inventoryRepository;
-        this.storeRepository = storeRepository;
     }
 
     @Transactional
@@ -62,8 +58,8 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productRequestDto.getDescription());
         product.setPrice(productRequestDto.getPrice());
         product.setCategory(category);
-        product.setCreatedAt(LocalDateTime.now());
-        product.setUpdatedAt(LocalDateTime.now());
+        product.setCreatedAt(Instant.now());
+        product.setUpdatedAt(Instant.now());
 
         Product savedProduct = productRepository.save(product);
 
@@ -106,7 +102,7 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(productRequestDto.getDescription());
         product.setPrice(productRequestDto.getPrice());
         product.setCategory(category);
-        product.setUpdatedAt(LocalDateTime.now());
+        product.setUpdatedAt(Instant.now());
         productRepository.save(product);
 
         List<Long> imagesToDelete = productRequestDto.getImagesToDelete();

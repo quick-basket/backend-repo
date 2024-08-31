@@ -48,7 +48,7 @@ public class Discount {
     @Column(name = "type", nullable = false)
     private DiscountType type;
 
-     @Column(nullable = false)
+    @Column(nullable = false)
     private BigDecimal value;
 
     @Column(name = "min_purchase")
