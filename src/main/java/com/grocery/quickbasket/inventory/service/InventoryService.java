@@ -11,7 +11,7 @@ import com.grocery.quickbasket.inventory.entity.Inventory;
 public interface InventoryService {
 
     InventoryResponseDto craeteInventory (InventoryRequestDto inventoryRequestDto);
-    Inventory updateInventory (Long id, InventoryRequestUpdateDto updateDto);
+    InventoryResponseDto updateInventory (Long id, InventoryRequestUpdateDto updateDto);
     List<Inventory> getAllProductCategory();
     List<InventoryListResponseDto> getInventoryByStoreId(Long storeId);
     void deleteInventory(Long id);

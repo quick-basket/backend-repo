@@ -32,13 +32,12 @@ public class DiscountServiceImpl implements DiscountService {
     }
 
     @Override
-    public List<DiscountListResponseDto> getAllDiscounts() {
-        List<Discount> discounts = discountRepository.findAll();
-        List<DiscountListResponseDto> discountDtos = discounts.stream()
+    public List<DiscountListResponseDto> getAllDiscountsByStoreId(Long storeId) {
+        List<Discount> discounts = discountRepository.findByStoreId(storeId);
+        return discounts.stream()
             .map(DiscountListResponseDto::fromEntity)
             .collect(Collectors.toList());
-
-        return discountDtos; 
+        
     }
 
     @Override

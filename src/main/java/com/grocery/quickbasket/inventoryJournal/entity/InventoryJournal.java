@@ -1,9 +1,9 @@
-package com.grocery.quickbasket.products.entity;
+package com.grocery.quickbasket.inventoryJournal.entity;
 
-import java.math.BigDecimal;
+import com.grocery.quickbasket.inventory.entity.Inventory;
+import com.grocery.quickbasket.user.entity.User;
+
 import java.time.Instant;
-
-import com.grocery.quickbasket.productCategory.entity.ProductCategory;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +13,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,40 +22,29 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "products")
-public class Product {
+@Table(name = "inventory_journals")
+public class InventoryJournal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(nullable = false)
-    private BigDecimal price;
-
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
-    private ProductCategory category;
+    @JoinColumn(name = "inventory_id")
+    private Inventory inventory;
+
+    // @ManyToOne
+    // @JoinColumn(name = "user_id")
+    // private User user;
+
+    @Column(name = "quantity_change")
+    private int quantityChange;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    @Column(name = "updated_at")
-    private Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
     }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
-    }
-
 }

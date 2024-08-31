@@ -21,6 +21,8 @@ import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.service.InventoryService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/inventory")
 public class InventoryController {
@@ -48,8 +50,8 @@ public class InventoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Inventory> updateInventory (@PathVariable Long id, @RequestBody InventoryRequestUpdateDto updateDto) {
-        Inventory updatedInventory = inventoryService.updateInventory(id, updateDto);
+    public ResponseEntity<?> updateInventory (@PathVariable Long id, @Valid @RequestBody InventoryRequestUpdateDto updateDto) {
+        InventoryResponseDto updatedInventory = inventoryService.updateInventory(id, updateDto);
         return ResponseEntity.ok(updatedInventory);
     }
 
