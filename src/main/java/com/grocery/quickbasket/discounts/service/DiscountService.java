@@ -10,7 +10,7 @@ import com.grocery.quickbasket.discounts.entity.Discount;
 
 public interface DiscountService {
 
-    List<DiscountListResponseDto> getAllDiscounts();
+    List<DiscountListResponseDto> getAllDiscountsByStoreId(Long storeId);
     Optional<Discount> getDiscountById(Long id);
     DiscountResponseDto createDiscount(DiscountRequestDto requestDto);
     DiscountResponseDto updateDiscount(Long id, DiscountRequestDto requestDto);

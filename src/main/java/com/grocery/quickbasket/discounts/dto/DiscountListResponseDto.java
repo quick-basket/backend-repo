@@ -17,7 +17,9 @@ public class DiscountListResponseDto {
     private Instant startDate;
     private Instant endDate;
     private Long storeId;
+    private String storeName;
     private Long productId;
+    private String productName;
 
     public static DiscountListResponseDto fromEntity(Discount discount) {
         DiscountListResponseDto dto = new DiscountListResponseDto();
@@ -29,7 +31,9 @@ public class DiscountListResponseDto {
         dto.setStartDate(discount.getStartDate());
         dto.setEndDate(discount.getEndDate());
         dto.setStoreId(discount.getStore().getId());
+        dto.setStoreName(discount.getStore().getName());
         dto.setProductId(discount.getProduct().getId());
+        dto.setProductName(discount.getProduct().getName());
         return dto;
     }
 }

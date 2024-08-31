@@ -39,9 +39,9 @@ public class DiscountController {
         return ResponseEntity.ok(updatedDiscount);
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllDiscount() {
-        List<DiscountListResponseDto> discounts = discountService.getAllDiscounts();
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<?> getAllDiscount(@PathVariable Long storeId) {
+        List<DiscountListResponseDto> discounts = discountService.getAllDiscountsByStoreId(storeId);
         return ResponseEntity.ok(discounts);
     }
 }
