@@ -6,9 +6,14 @@ import org.springframework.data.repository.query.Param;
 
 import com.grocery.quickbasket.discounts.entity.Discount;
 import java.util.List;
+import java.util.Optional;
 
 public interface DiscountRepository extends JpaRepository<Discount, Long> {
 
-    @Query("SELECT d FROM Discount d JOIN d.inventory i WHERE i.store.id = :storeId")
-    List<Discount> findAllByStoreId(@Param("storeId") Long storeId);
+    @Query("SELECT d FROM Discount d " +
+       "JOIN d.inventory i " +
+       "JOIN i.store s " +
+       "WHERE s.id = :storeId AND d.deletedAt IS NULL")
+List<Discount> findAllByStoreId(@Param("storeId") Long storeId);
+    Optional<Discount> findByIdAndDeletedAtIsNull(Long id);
 }
