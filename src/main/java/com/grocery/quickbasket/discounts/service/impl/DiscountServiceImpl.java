@@ -79,9 +79,10 @@ public class DiscountServiceImpl implements DiscountService {
 
     @Override
     public void deleteDiscount(Long id) {
-        Discount existingDiscountt = discountRepository.findById(id)
+        Discount existingDiscountt = discountRepository.findByIdAndDeletedAtIsNull(id)
             .orElseThrow(() -> new DataNotFoundException("Discount not found for this id :: " + id));
-        discountRepository.delete(existingDiscountt);
+        existingDiscountt.softDelete();
+        discountRepository.save(existingDiscountt);
     }
 
 }

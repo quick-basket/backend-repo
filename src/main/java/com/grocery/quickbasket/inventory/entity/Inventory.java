@@ -3,6 +3,7 @@ package com.grocery.quickbasket.inventory.entity;
 import java.util.List;
 import java.time.Instant;
 
+import com.grocery.quickbasket.discounts.entity.Discount;
 import com.grocery.quickbasket.inventoryJournal.entity.InventoryJournal;
 import com.grocery.quickbasket.products.entity.Product;
 import com.grocery.quickbasket.store.entity.Store;
@@ -41,6 +42,9 @@ public class Inventory {
 
     @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryJournal> journals;
+
+    @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Discount> discount;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
