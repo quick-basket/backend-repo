@@ -11,6 +11,6 @@ public interface ProductService {
     ProductResponseDto createProduct (ProductRequestDto productRequestDto);
     String updateProduct (Long id, ProductRequestDto productRequestDto);
     ProductResponseDto getProductById (Long id);
-    List<ProductListResponseDto> getAllProducts();
+    List<ProductListResponseDto> getAllProducts(Long storeId);
     void deleteProduct(Long id);
 }

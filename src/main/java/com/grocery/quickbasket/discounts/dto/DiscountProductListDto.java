@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class DiscountProductListDto {
 
-    private Long id;
+    
     private BigDecimal discountValue;
-    private BigDecimal currentPrice;  
+    private BigDecimal discountPrice;  
 }

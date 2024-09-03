@@ -81,9 +81,9 @@ public class ProductController {
         return Response.successResponse("fetched products", getProductResponseDto);
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllProducts() {
-        return Response.successResponse("get all products", productService.getAllProducts());
+    @GetMapping("/stores/{storeId}")
+    public ResponseEntity<?> getAllProducts(@PathVariable Long storeId) {
+        return Response.successResponse("get all products", productService.getAllProducts(storeId));
 
     }
     // @GetMapping("/stores")
