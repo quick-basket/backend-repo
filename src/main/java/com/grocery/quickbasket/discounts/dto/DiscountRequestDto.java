@@ -10,8 +10,7 @@ import lombok.Data;
 @Data
 public class DiscountRequestDto {
 
-    private Long storeId;
-    private Long productId;
+    private Long inventoryId;
     private String type;  
     private BigDecimal value;
     private BigDecimal minPurchase;

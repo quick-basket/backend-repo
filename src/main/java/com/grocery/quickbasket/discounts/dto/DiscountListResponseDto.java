@@ -30,10 +30,10 @@ public class DiscountListResponseDto {
         dto.setMaxDiscount(discount.getMaxDiscount());
         dto.setStartDate(discount.getStartDate());
         dto.setEndDate(discount.getEndDate());
-        dto.setStoreId(discount.getStore().getId());
-        dto.setStoreName(discount.getStore().getName());
-        dto.setProductId(discount.getProduct().getId());
-        dto.setProductName(discount.getProduct().getName());
+        dto.setStoreId(discount.getInventory().getStore().getId());
+        dto.setStoreName(discount.getInventory().getStore().getName());
+        dto.setProductId(discount.getInventory().getProduct().getId());
+        dto.setProductName(discount.getInventory().getProduct().getName());
         return dto;
     }
 }

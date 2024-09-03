@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.grocery.quickbasket.inventoryJournal.dto.InventoryJournalDto;
 import com.grocery.quickbasket.inventoryJournal.service.InventoryJournalService;
+import com.grocery.quickbasket.response.Response;
 
 @RestController
 @RequestMapping("/api/v1/inventory-journals")
@@ -22,8 +23,8 @@ public class InventoryJournalController {
     }
 
     @GetMapping("/{storeId}")
-    public ResponseEntity<List<?>> getAllByStoreId(@PathVariable Long storeId) {
+    public ResponseEntity<?> getAllByStoreId(@PathVariable Long storeId) {
         List<InventoryJournalDto> journalDtos = inventoryJournalService.getAllByStoreId(storeId);
-        return ResponseEntity.ok(journalDtos);
+        return Response.successResponse("fetch all journals", journalDtos);
     }
 }
