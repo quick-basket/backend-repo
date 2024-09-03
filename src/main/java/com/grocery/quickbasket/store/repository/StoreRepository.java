@@ -4,6 +4,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.grocery.quickbasket.store.entity.Store;
 
-public interface StoreRepository extends JpaRepository<Store, Long>{
+import java.util.List;
 
+public interface StoreRepository extends JpaRepository<Store, Long>{
+    boolean existsByName(String name);
+    List<Store> getStoreByDeletedAtIsNull();
 }
