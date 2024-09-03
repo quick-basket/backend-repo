@@ -6,9 +6,9 @@ import com.grocery.quickbasket.store.dto.StoreDto;
 import com.grocery.quickbasket.store.entity.Store;
 
 public interface StoreService {
-    List<StoreDto> getAllStores();
-    StoreDto getStoreById(Long id);
-    StoreDto addStore(StoreDto dto);
-    StoreDto updateStore(StoreDto dto);
+    List<Store> getAllStores();
+    Store getStoreById(Long id);
+    Store addStore(StoreDto dto);
+    Store updateStore(StoreDto dto);
     String deleteStore(Long id);
 }

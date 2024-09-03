@@ -3,6 +3,8 @@ package com.grocery.quickbasket.products.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
+
 import lombok.Data;
 
 @Data
@@ -17,5 +19,5 @@ public class ProductListResponseDto {
     private Integer quantity;
     private List<String> imageUrls;
     private List<Long> imageIds;
-
+    private DiscountProductListDto discount;
 }

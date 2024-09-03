@@ -20,6 +20,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(StoreNameSameException.class)
+    public final ResponseEntity<Response<String>> handleStoreNameSameException(StoreNameSameException ex){
+        return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(StoreNotFoundException.class)
     public final ResponseEntity<Response<String>> handleStoreNotFoundException(StoreNotFoundException ex){
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);

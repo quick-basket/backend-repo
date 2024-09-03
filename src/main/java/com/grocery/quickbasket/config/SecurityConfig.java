@@ -92,10 +92,12 @@ public class SecurityConfig {
                     auth.requestMatchers("/api/v1/auth/**").permitAll();
                     auth.requestMatchers("/api/v1/products/**").permitAll();
                     auth.requestMatchers("/api/v1/category/**").permitAll();
-                    auth.requestMatchers("/api/v1/stores/**").permitAll();
+                    auth.requestMatchers("/api/v1/stores").hasAuthority("SCOPE_super_admin");
+                    auth.requestMatchers("/api/v1/stores/**").hasAuthority("SCOPE_super_admin");
                     auth.requestMatchers("/api/v1/inventory/**").permitAll();
                     auth.requestMatchers("/api/v1/discounts/**").permitAll();
                     auth.requestMatchers("/api/v1/inventory-journals/**").permitAll();
+                    auth.requestMatchers("/api/v1/vouchers/**").permitAll();
                     /*
                     Kalau mau tambahin Role Based access
                     example:

@@ -22,8 +22,8 @@ public class DiscountResponseDto {
     public static DiscountResponseDto formDiscount (Discount discount) {
         DiscountResponseDto dto = new DiscountResponseDto();
         dto.setId(discount.getId());
-        dto.setStoreName(discount.getStore().getName());
-        dto.setProductName(discount.getProduct().getName());
+        dto.setStoreName(discount.getInventory().getStore().getName());
+        dto.setProductName(discount.getInventory().getProduct().getName());
         dto.setType(discount.getType().name());
         dto.setValue(discount.getValue());
         dto.setMinPurchase(discount.getMinPurchase());

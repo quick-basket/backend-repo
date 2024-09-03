@@ -1,17 +1,16 @@
-package com.grocery.quickbasket.discounts.entity;
+package com.grocery.quickbasket.vouchers.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 
 import org.hibernate.annotations.ColumnDefault;
 
-import com.grocery.quickbasket.inventory.entity.Inventory;
+import com.grocery.quickbasket.products.entity.Product;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -26,31 +25,33 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@NoArgsConstructor
+@NoArgsConstructor 
 @AllArgsConstructor
-@Table(name = "discounts")
-public class Discount {
-
+@Table(name = "vouchers")
+public class Voucher {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "inventory_id", nullable = false)
-    private Inventory inventory;
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    private String code;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private DiscountType type;
+    private VoucherType voucherType;
 
-    @Column(nullable = false)
-    private BigDecimal value;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_type", nullable = false)
+    private DiscountTypes discountType;
 
+    @Column(name = "discount_value")
+    private BigDecimal discountValue;
+    
     @Column(name = "min_purchase")
     private BigDecimal minPurchase;
-
-    @Column(name = "max_discount")
-    private BigDecimal maxDiscount;
 
     @Column(name = "start_date")
     private Instant startDate;
