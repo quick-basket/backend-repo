@@ -2,7 +2,6 @@ package com.grocery.quickbasket.products.controller;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.grocery.quickbasket.products.dto.ProductListResponseDto;
 import com.grocery.quickbasket.products.dto.ProductRequestDto;
 import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.service.ProductService;
@@ -35,7 +33,7 @@ public class ProductController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ProductResponseDto> createProduct (
+    public ResponseEntity<?> createProduct (
         @RequestParam("name") String name,
         @RequestParam("description") String description,
         @RequestParam("price") BigDecimal price,
@@ -50,7 +48,7 @@ public class ProductController {
     requestDto.setImageFiles(imageFiles);
 
     ProductResponseDto responseDto = productService.createProduct(requestDto);
-    return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
+    return Response.successResponse("product created", responseDto);
 
     }
 
@@ -78,13 +76,15 @@ public class ProductController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponseDto> getProductById(@PathVariable Long id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+    public ResponseEntity<?> getProductById(@PathVariable Long id) {
+        ProductResponseDto getProductResponseDto = productService.getProductById(id);
+        return Response.successResponse("fetched products", getProductResponseDto);
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductListResponseDto>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<?> getAllProducts() {
+        return Response.successResponse("get all products", productService.getAllProducts());
+
     }
     // @GetMapping("/stores")
     // public ResponseEntity<List<ProductListResponseDto>> getAllProductsByStoreId() {

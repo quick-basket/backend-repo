@@ -20,6 +20,7 @@ import com.grocery.quickbasket.inventory.dto.InventoryRequestUpdateDto;
 import com.grocery.quickbasket.inventory.dto.InventoryResponseDto;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.service.InventoryService;
+import com.grocery.quickbasket.response.Response;
 
 import jakarta.validation.Valid;
 
@@ -35,24 +36,24 @@ public class InventoryController {
     @PostMapping("/create")
     public ResponseEntity<?> createInventory(@RequestBody InventoryRequestDto inventoryRequestDto) {
         InventoryResponseDto responseDto = inventoryService.craeteInventory(inventoryRequestDto);
-        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
+        return Response.successResponse("invetory created", responseDto);
     }
     @GetMapping()
-    public ResponseEntity<List<Inventory>> getAllInventory() {
+    public ResponseEntity<?> getAllInventory() {
         List<Inventory> inventories = inventoryService.getAllProductCategory();
-        return new ResponseEntity<>(inventories, HttpStatus.CREATED);
+        return Response.successResponse("fetch all inventories", inventories);
     }
 
     @GetMapping("/store/{storeId}")
-    public ResponseEntity<List<InventoryListResponseDto>> getInventoryByStoreId(@PathVariable Long storeId) {
+    public ResponseEntity<?> getInventoryByStoreId(@PathVariable Long storeId) {
         List<InventoryListResponseDto> inventoryList = inventoryService.getInventoryByStoreId(storeId);
-        return ResponseEntity.ok(inventoryList);
+        return Response.successResponse("fetch inventory by store id", inventoryList);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateInventory (@PathVariable Long id, @Valid @RequestBody InventoryRequestUpdateDto updateDto) {
         InventoryResponseDto updatedInventory = inventoryService.updateInventory(id, updateDto);
-        return ResponseEntity.ok(updatedInventory);
+        return Response.successResponse("inventory updated", updatedInventory);
     }
 
     @DeleteMapping("/{id}")
