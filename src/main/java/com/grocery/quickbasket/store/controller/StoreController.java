@@ -26,26 +26,22 @@ public class StoreController {
         return Response.successResponse("get all stores", storeService.getAllStores());
     }
 
-    // GET /api/v1/stores/{id} - Get a store by ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getStoreById(@PathVariable Long id) {
         return Response.successResponse("get store by id", storeService.getStoreById(id));
     }
 
-    // POST /api/v1/stores - Add a new store
     @PostMapping
     public ResponseEntity<?> addStore(@RequestBody StoreDto storeDto) {
         return Response.successResponse("add store", storeService.addStore(storeDto));
     }
 
-    // PUT /api/v1/stores/{id} - Update an existing store
     @PutMapping("/{id}")
     public ResponseEntity<?> updateStore(@PathVariable Long id, @RequestBody StoreDto storeDto) {
         storeDto.setId(id); // Ensure the ID in the DTO matches the path variable
         return Response.successResponse("update store", storeService.updateStore(storeDto));
     }
 
-    // DELETE /api/v1/stores/{id} - Delete a store by ID
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStore(@PathVariable Long id) {
         return Response.successResponse("delete store", storeService.deleteStore(id));

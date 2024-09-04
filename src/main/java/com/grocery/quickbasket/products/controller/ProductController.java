@@ -84,12 +84,7 @@ public class ProductController {
     @GetMapping("/stores/{storeId}")
     public ResponseEntity<?> getAllProducts(@PathVariable Long storeId) {
         return Response.successResponse("get all products", productService.getAllProducts(storeId));
-
     }
-    // @GetMapping("/stores")
-    // public ResponseEntity<List<ProductListResponseDto>> getAllProductsByStoreId() {
-    //     return ResponseEntity.ok(productService.getAllProducts());
-    // }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
