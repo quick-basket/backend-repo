@@ -14,7 +14,9 @@ public interface DiscountRepository extends JpaRepository<Discount, Long> {
        "JOIN d.inventory i " +
        "JOIN i.store s " +
        "WHERE s.id = :storeId AND d.deletedAt IS NULL")
-    List<Discount> findAllByStoreId(@Param("storeId") Long storeId);
+
+List<Discount> findAllByStoreId(@Param("storeId") Long storeId);
     Optional<Discount> findByIdAndDeletedAtIsNull(Long id);
+    List<Discount> findByInventoryId(Long inventoryId);
 
 }

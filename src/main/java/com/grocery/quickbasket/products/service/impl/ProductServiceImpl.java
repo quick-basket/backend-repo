@@ -10,6 +10,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
+import com.grocery.quickbasket.discounts.entity.Discount;
+import com.grocery.quickbasket.discounts.entity.DiscountType;
+import com.grocery.quickbasket.discounts.repository.DiscountRepository;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.repository.InventoryRepository;
@@ -27,6 +31,8 @@ import com.grocery.quickbasket.products.service.ProductService;
 import java.time.Instant;
 import java.util.Map;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -36,13 +42,15 @@ public class ProductServiceImpl implements ProductService {
     private final Cloudinary cloudinary;
     private final ProductImageRepository productImageRepository;
     private final InventoryRepository inventoryRepository;
+    private final DiscountRepository discountRepository;
 
-    public ProductServiceImpl (ProductRepository productRepository, ProductCategoryRepository productCategoryRepository, Cloudinary cloudinary, ProductImageRepository productImageRepository, InventoryRepository inventoryRepository) {
+    public ProductServiceImpl (ProductRepository productRepository, ProductCategoryRepository productCategoryRepository, Cloudinary cloudinary, ProductImageRepository productImageRepository, InventoryRepository inventoryRepository, DiscountRepository discountRepository) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
         this.cloudinary = cloudinary;
         this.productImageRepository = productImageRepository;
         this.inventoryRepository = inventoryRepository;
+        this.discountRepository = discountRepository;
     }
 
     @Transactional
@@ -159,8 +167,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductListResponseDto> getAllProducts() {
-        List<Product> products = productRepository.findAll();
+    public List<ProductListResponseDto> getAllProducts(Long storeId) {
+        // Mengambil inventaris berdasarkan storeId
+        List<Inventory> inventories = inventoryRepository.findByStoreId(storeId);
+
+        // Mengambil produk dari inventaris
+        List<Product> products = inventories.stream()
+            .map(Inventory::getProduct)
+            .distinct()
+            .collect(Collectors.toList());
+
         List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
         for (Product product : products) {
@@ -172,6 +188,7 @@ public class ProductServiceImpl implements ProductService {
             dto.setCategoryId(product.getCategory().getId());
             dto.setCategoryName(product.getCategory().getName());
 
+            // Mengambil gambar produk
             List<ProductImage> images = productImageRepository.findByProduct(product);
             List<String> imageUrls = images.stream()
                 .map(ProductImage::getImageUrl)
@@ -182,13 +199,56 @@ public class ProductServiceImpl implements ProductService {
             dto.setImageUrls(imageUrls);
             dto.setImageIds(imageIds);
 
-            List<Inventory> inventories = inventoryRepository.findByProductId(product.getId());
+            // Menghitung total inventaris untuk produk ini
             int totalQuantity = inventories.stream()
+                .filter(inventory -> inventory.getProduct().getId().equals(product.getId()))
                 .mapToInt(Inventory::getQuantity)
                 .sum();
             dto.setQuantity(totalQuantity);
+
+            // Mengambil diskon terkait produk dari inventaris
+            List<Discount> discounts = inventories.stream()
+            .filter(inventory -> inventory.getProduct().getId().equals(product.getId())) // Filter berdasarkan productId
+            .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
+            .distinct()
+            .collect(Collectors.toList());
+
+            // Inisialisasi nilai diskon dan harga diskon
+            DiscountType discountType = null;
+            BigDecimal discountValue = BigDecimal.ZERO;
+            BigDecimal discountPrice = product.getPrice();
+
+            if (!discounts.isEmpty()) {
+                for (Discount discount : discounts) {
+                    discountType = discount.getType();
+                    switch (discountType) {
+                        case PERCENTAGE:
+                            discountValue = discount.getValue();
+                            discountPrice =product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                            break;
+                        case FIXED:
+                            discountValue = discount.getValue();
+                            discountPrice = product.getPrice().subtract(discountValue);
+                            break;
+                        case BUY_ONE_GET_ONE:
+                            discountValue = BigDecimal.ZERO;
+                            // Handling BOGO can be different based on your requirement
+                            break;
+                    }
+                }
+            } else {
+                discountValue = BigDecimal.ZERO;
+                discountPrice = product.getPrice();
+            }
+            DiscountProductListDto discountDto = new DiscountProductListDto();
+            discountDto.setDiscountType(discountType);
+            discountDto.setDiscountValue(discountValue);
+            discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
+            dto.setDiscount(discountDto);
+
             responseDtos.add(dto);
         }
+
         return responseDtos;
     }
     
