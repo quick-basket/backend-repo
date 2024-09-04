@@ -12,6 +12,7 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
 import com.grocery.quickbasket.discounts.entity.Discount;
+import com.grocery.quickbasket.discounts.entity.DiscountType;
 import com.grocery.quickbasket.discounts.repository.DiscountRepository;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.inventory.entity.Inventory;
@@ -213,12 +214,14 @@ public class ProductServiceImpl implements ProductService {
             .collect(Collectors.toList());
 
             // Inisialisasi nilai diskon dan harga diskon
+            DiscountType discountType = null;
             BigDecimal discountValue = BigDecimal.ZERO;
             BigDecimal discountPrice = product.getPrice();
 
             if (!discounts.isEmpty()) {
                 for (Discount discount : discounts) {
-                    switch (discount.getType()) {
+                    discountType = discount.getType();
+                    switch (discountType) {
                         case PERCENTAGE:
                             discountValue = discount.getValue();
                             discountPrice =product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
@@ -238,6 +241,7 @@ public class ProductServiceImpl implements ProductService {
                 discountPrice = product.getPrice();
             }
             DiscountProductListDto discountDto = new DiscountProductListDto();
+            discountDto.setDiscountType(discountType);
             discountDto.setDiscountValue(discountValue);
             discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
             dto.setDiscount(discountDto);
