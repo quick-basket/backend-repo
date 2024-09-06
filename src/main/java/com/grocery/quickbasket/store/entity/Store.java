@@ -12,6 +12,8 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Point;
+
 import java.time.Instant;
 
 @Entity
@@ -40,11 +42,8 @@ public class Store {
     @Column(name = "postal_code", nullable = false)
     private String postalCode;
 
-    @Column(nullable = false)
-    private float latitude;
-
-    @Column(nullable = false)
-    private float longitude;
+    @Column(columnDefinition = "geography(Point, 4326)")
+    private Point location;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -79,7 +78,5 @@ public class Store {
         this.city = dto.getCity();
         this.province = dto.getProvince();
         this.postalCode = dto.getPostalCode();
-        this.latitude = dto.getLatitude();
-        this.longitude = dto.getLongitude();
     }
 }
