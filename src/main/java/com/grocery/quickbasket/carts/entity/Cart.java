@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.user.entity.User;
@@ -38,8 +40,9 @@ public class Cart {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "inventory_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "inventory_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Inventory inventory;
 
     @Column(name = "price")

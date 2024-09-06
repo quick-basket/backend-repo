@@ -91,6 +91,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/v1/auth/**").permitAll();
                     auth.requestMatchers("/api/v1/products/**").permitAll();
+                    auth.requestMatchers("/api/v1/products/stores/**").permitAll();
                     auth.requestMatchers("/api/v1/category/**").permitAll();
                     auth.requestMatchers("/api/v1/stores").hasAuthority("SCOPE_super_admin");
                     auth.requestMatchers("/api/v1/stores/**").hasAuthority("SCOPE_super_admin");

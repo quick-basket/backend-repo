@@ -1,7 +1,13 @@
 package com.grocery.quickbasket.inventory.entity;
 
 import java.util.List;
+
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import java.time.Instant;
+
+import com.grocery.quickbasket.carts.entity.Cart;
 
 import com.grocery.quickbasket.discounts.entity.Discount;
 import com.grocery.quickbasket.inventoryJournal.entity.InventoryJournal;
@@ -31,6 +37,7 @@ public class Inventory {
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Product product;
 
     @ManyToOne
@@ -45,6 +52,9 @@ public class Inventory {
 
     @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Discount> discount;
+
+    @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Cart> carts;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

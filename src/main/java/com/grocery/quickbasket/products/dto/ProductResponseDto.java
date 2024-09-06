@@ -19,6 +19,7 @@ public class ProductResponseDto {
     private Long categoryId;
     private String categoryName;
     private List<String> imageUrls;
+    private List<Long> imageIds;
     private Integer quantity;
     private Instant createdAt;
     private Instant updatedAt;
@@ -29,6 +30,7 @@ public class ProductResponseDto {
         dto.setName(product.getName());
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
+        dto.setCategoryId(product.getCategory().getId());
         dto.setCategoryName(product.getCategory().getName());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());

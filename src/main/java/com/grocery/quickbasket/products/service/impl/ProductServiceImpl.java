@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -153,30 +156,33 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new DataNotFoundException("product not found"));
         
-        List<String> imageUrls = productImageRepository.findByProduct(product)
-            .stream().map(ProductImage::getImageUrl)
+        List<ProductImage> images = productImageRepository.findByProduct(product);
+        List<String> imageUrls = images.stream()
+            .map(ProductImage::getImageUrl)
+            .collect(Collectors.toList());
+        List<Long> imageIds = images.stream()
+            .map(ProductImage::getId)
             .collect(Collectors.toList());
         List<Inventory> inventories = inventoryRepository.findByProductId(product.getId());
         int totalQuantity = inventories.stream()
             .mapToInt(Inventory::getQuantity)
             .sum();
         ProductResponseDto responseDto = ProductResponseDto.mapToDto(product);
+        responseDto.setImageIds(imageIds);
         responseDto.setImageUrls(imageUrls);
         responseDto.setQuantity(totalQuantity);
         return responseDto;
     }
 
     @Override
-    public List<ProductListResponseDto> getAllProducts(Long storeId) {
-        // Mengambil inventaris berdasarkan storeId
-        List<Inventory> inventories = inventoryRepository.findByStoreId(storeId);
+    public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageable pageable) {
 
-        // Mengambil produk dari inventaris
+        // Mendapatkan halaman inventaris berdasarkan storeId
+        Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
         List<Product> products = inventories.stream()
             .map(Inventory::getProduct)
             .distinct()
             .collect(Collectors.toList());
-
         List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
         for (Product product : products) {
@@ -208,11 +214,10 @@ public class ProductServiceImpl implements ProductService {
 
             // Mengambil diskon terkait produk dari inventaris
             List<Discount> discounts = inventories.stream()
-            .filter(inventory -> inventory.getProduct().getId().equals(product.getId())) // Filter berdasarkan productId
-            .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
-            .distinct()
-            .collect(Collectors.toList());
-
+                .filter(inventory -> inventory.getProduct().getId().equals(product.getId())) // Filter berdasarkan productId
+                .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
+                .distinct()
+                .collect(Collectors.toList());
             // Inisialisasi nilai diskon dan harga diskon
             DiscountType discountType = null;
             BigDecimal discountValue = BigDecimal.ZERO;
@@ -224,7 +229,7 @@ public class ProductServiceImpl implements ProductService {
                     switch (discountType) {
                         case PERCENTAGE:
                             discountValue = discount.getValue();
-                            discountPrice =product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                            discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
                             break;
                         case FIXED:
                             discountValue = discount.getValue();
@@ -249,12 +254,44 @@ public class ProductServiceImpl implements ProductService {
             responseDtos.add(dto);
         }
 
-        return responseDtos;
+        // Menggunakan PageImpl untuk pagination hasil
+        return new PageImpl<>(responseDtos, pageable, inventories.getTotalElements());
     }
+
     
     @Override
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        Product existingProduct = productRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new DataNotFoundException("voucher not found!"));
+        existingProduct.softDelete();
+        productRepository.save(existingProduct);
+    }
+
+    @Override
+    public Page<ProductListResponseDto> getAllProducts(Pageable pageable) {
+        Page<Product> products = productRepository.findAllByDeletedAtIsNull(pageable);
+        return products.map(product -> {
+            ProductListResponseDto dto = new ProductListResponseDto();
+            dto.setId(product.getId());
+            dto.setName(product.getName());
+            dto.setDescription(product.getDescription());
+            dto.setPrice(product.getPrice());
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+
+            List<ProductImage> images = productImageRepository.findByProduct(product);
+            List<String> imageUrls = images.stream()
+                .map(ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+            List<Long> imageIds = images.stream()
+                .map(ProductImage::getId)
+                .collect(Collectors.toList());
+            dto.setImageIds(imageIds);
+            dto.setImageUrls(imageUrls);
+
+            return dto;
+
+        });
     }
 
 }
