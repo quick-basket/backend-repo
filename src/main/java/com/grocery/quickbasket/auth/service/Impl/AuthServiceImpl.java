@@ -86,7 +86,7 @@ public class AuthServiceImpl implements AuthService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("quick-basket")
                 .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS))
+                .expiresAt(now.plus(12, ChronoUnit.HOURS))
                 .subject(authentication.getName())  // Use username as the subject
                 .claim("scope", scope)
                 .claim("userId", userId)
@@ -127,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("quick-basket")
                 .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS))
+                .expiresAt(now.plus(12, ChronoUnit.HOURS))
                 .subject(user.getEmail())
                 .claim("scope", user.getRole().name())
                 .claim("userId", user.getId())
