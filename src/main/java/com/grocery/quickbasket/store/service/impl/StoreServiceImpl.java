@@ -2,52 +2,64 @@ package com.grocery.quickbasket.store.service.impl;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
+import com.grocery.quickbasket.auth.helper.Claims;
+import com.grocery.quickbasket.exceptions.StoreNameSameException;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.exceptions.UserIdNotFoundException;
 import com.grocery.quickbasket.store.dto.StoreDto;
+import com.grocery.quickbasket.store.repository.StoreAdminRepository;
 import org.springframework.stereotype.Service;
 
 import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.store.repository.StoreRepository;
 import com.grocery.quickbasket.store.service.StoreService;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StoreServiceImpl implements StoreService{
 
     private final StoreRepository storeRepository;
+    private final StoreAdminRepository storeAdminRepository;
 
-    public StoreServiceImpl (StoreRepository storeRepository) {
+    public StoreServiceImpl (StoreRepository storeRepository, StoreAdminRepository storeAdminRepository) {
         this.storeRepository = storeRepository;
+        this.storeAdminRepository = storeAdminRepository;
     }
 
     @Override
-    public List<StoreDto> getAllStores() {
-        List<Store> stores = storeRepository.findAll();
+    public List<Store> getAllStores() {
+        List<Store> stores = storeRepository.getStoreByDeletedAtIsNull();
         return stores.stream()
-                .map(StoreDto::fromEntity)
                 .toList();
     }
 
     @Override
-    public StoreDto getStoreById(Long id) {
-        Optional<Store> store = storeRepository.findById(id);
-        if (store.isEmpty()) {
-            throw new StoreNotFoundException("Store not found");
+    public Store getStoreById(Long id) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        if (!storeAdminRepository.existsByUserId(userId)){
+            throw new UserIdNotFoundException("User Id is not authorize");
         }
-        return StoreDto.fromEntity(store.get());
+
+        return storeRepository.findById(id)
+                .orElseThrow(() -> new StoreNotFoundException("Store not found"));
     }
 
     @Override
-    public StoreDto addStore(StoreDto dto) {
+    public Store addStore(StoreDto dto) {
+        boolean exist = storeRepository.existsByName(dto.getName());
+        if (exist) {
+            throw new StoreNameSameException("Store name already exist");
+        }
         Store store = StoreDto.toEntity(dto);
-        Store savedStore = storeRepository.save(store);
 
-        return StoreDto.fromEntity(savedStore);
+        return storeRepository.save(store);
     }
 
     @Override
-    public StoreDto updateStore(StoreDto dto) {
+    public Store updateStore(StoreDto dto) {
         Optional<Store> storeOptional = storeRepository.findById(dto.getId());
         if (storeOptional.isEmpty()) {
             throw new StoreNotFoundException("Store not found");
@@ -56,19 +68,23 @@ public class StoreServiceImpl implements StoreService{
 
         currentStore.updateFromDto(dto);
 
-        Store savedStore = storeRepository.save(currentStore);
-
-        return StoreDto.fromEntity(savedStore);
+        return storeRepository.save(currentStore);
 
     }
 
+    @Transactional
     @Override
     public String deleteStore(Long id) {
-        if (!storeRepository.existsById(id)) {
-            throw new StoreNotFoundException("Store not found");
-        }
-        storeRepository.deleteById(id);
+        Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new StoreNotFoundException("Store not found"));
+
+        store.softDelete();
+        storeRepository.save(store);
+
         return "Delete successfully";
+
+//        storeRepository.deleteById(id);
+//        return "Delete successfully";
     }
 
 

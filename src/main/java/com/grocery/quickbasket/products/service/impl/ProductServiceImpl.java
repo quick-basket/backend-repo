@@ -179,14 +179,10 @@ public class ProductServiceImpl implements ProductService {
 
         // Mendapatkan halaman inventaris berdasarkan storeId
         Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
-
-        // Mengambil produk dari inventaris dengan distinct
         List<Product> products = inventories.stream()
             .map(Inventory::getProduct)
             .distinct()
             .collect(Collectors.toList());
-
-        // List untuk menampung hasil DTO
         List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
         for (Product product : products) {
@@ -222,7 +218,6 @@ public class ProductServiceImpl implements ProductService {
                 .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
                 .distinct()
                 .collect(Collectors.toList());
-
             // Inisialisasi nilai diskon dan harga diskon
             DiscountType discountType = null;
             BigDecimal discountValue = BigDecimal.ZERO;
@@ -250,7 +245,6 @@ public class ProductServiceImpl implements ProductService {
                 discountValue = BigDecimal.ZERO;
                 discountPrice = product.getPrice();
             }
-
             DiscountProductListDto discountDto = new DiscountProductListDto();
             discountDto.setDiscountType(discountType);
             discountDto.setDiscountValue(discountValue);

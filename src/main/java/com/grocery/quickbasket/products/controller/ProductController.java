@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.grocery.quickbasket.products.dto.ProductListResponseDto;
 import com.grocery.quickbasket.products.dto.ProductRequestDto;
 import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.service.ProductService;
@@ -93,6 +92,7 @@ public class ProductController {
         ) {
             Pageable pageable = PageRequest.of(page, size);
         return Response.successResponse("get all products", productService.getAllProductsByStoreId(storeId, pageable));
+
     }
 
      @GetMapping

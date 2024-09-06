@@ -12,4 +12,5 @@ public class DiscountProductListDto {
     private DiscountType discountType;
     private BigDecimal discountValue;
     private BigDecimal discountPrice;  
+
 }
