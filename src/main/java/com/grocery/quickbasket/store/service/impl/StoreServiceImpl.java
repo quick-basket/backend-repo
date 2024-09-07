@@ -1,6 +1,7 @@
 package com.grocery.quickbasket.store.service.impl;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import com.grocery.quickbasket.auth.helper.Claims;
@@ -9,6 +10,9 @@ import com.grocery.quickbasket.exceptions.StoreNotFoundException;
 import com.grocery.quickbasket.exceptions.UserIdNotFoundException;
 import com.grocery.quickbasket.store.dto.StoreDto;
 import com.grocery.quickbasket.store.repository.StoreAdminRepository;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 
 import com.grocery.quickbasket.store.entity.Store;
@@ -28,38 +32,46 @@ public class StoreServiceImpl implements StoreService{
     }
 
     @Override
-    public List<Store> getAllStores() {
-        List<Store> stores = storeRepository.getStoreByDeletedAtIsNull();
-        return stores.stream()
-                .toList();
+    public List<StoreDto> getAllStores() {
+        List<Store> storePage = storeRepository.getStoreByDeletedAtIsNull();
+
+        return storePage.stream().map(StoreDto::fromEntity).toList();
     }
 
     @Override
-    public Store getStoreById(Long id) {
+    public StoreDto getStoreById(Long id) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
+        String scope = (String) claims.get("scope");
 
-        if (!storeAdminRepository.existsByUserId(userId)){
+        if (!storeAdminRepository.existsByUserId(userId) && !Objects.equals(scope, "super_admin")){
             throw new UserIdNotFoundException("User Id is not authorize");
         }
 
-        return storeRepository.findById(id)
+        Store currentStore = storeRepository.findById(id)
                 .orElseThrow(() -> new StoreNotFoundException("Store not found"));
+
+        return StoreDto.fromEntity(currentStore);
     }
 
     @Override
-    public Store addStore(StoreDto dto) {
+    public StoreDto addStore(StoreDto dto) {
         boolean exist = storeRepository.existsByName(dto.getName());
         if (exist) {
             throw new StoreNameSameException("Store name already exist");
         }
         Store store = StoreDto.toEntity(dto);
+        GeometryFactory gef = new GeometryFactory();
+        Point storeLocation = gef.createPoint(new Coordinate(dto.getLongitude(), dto.getLatitude()));
 
-        return storeRepository.save(store);
+        store.setLocation(storeLocation);
+        storeRepository.save(store);
+
+        return StoreDto.fromEntity(store);
     }
 
     @Override
-    public Store updateStore(StoreDto dto) {
+    public StoreDto updateStore(StoreDto dto) {
         Optional<Store> storeOptional = storeRepository.findById(dto.getId());
         if (storeOptional.isEmpty()) {
             throw new StoreNotFoundException("Store not found");
@@ -68,8 +80,8 @@ public class StoreServiceImpl implements StoreService{
 
         currentStore.updateFromDto(dto);
 
-        return storeRepository.save(currentStore);
-
+        storeRepository.save(currentStore);
+        return StoreDto.fromEntity(currentStore);
     }
 
     @Transactional
@@ -82,9 +94,17 @@ public class StoreServiceImpl implements StoreService{
         storeRepository.save(store);
 
         return "Delete successfully";
+    }
 
-//        storeRepository.deleteById(id);
-//        return "Delete successfully";
+    @Override
+    public Store findNearestStore(double longitude, double latitude) {
+        return storeRepository.findNearestStore(longitude, latitude);
+
+    }
+
+    @Override
+    public double calculateDistance(Long storeId, Point userLocation) {
+        return storeRepository.calculateDistanceInKm(storeId, userLocation);
     }
 
 
