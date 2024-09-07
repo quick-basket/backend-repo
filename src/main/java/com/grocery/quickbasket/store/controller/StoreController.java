@@ -1,14 +1,11 @@
 package com.grocery.quickbasket.store.controller;
 
-import java.util.List;
-
 import com.grocery.quickbasket.response.Response;
 import com.grocery.quickbasket.store.dto.StoreDto;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.store.service.StoreService;
 
 @RestController
@@ -22,7 +19,7 @@ public class StoreController {
     }
 
     @GetMapping()
-    public ResponseEntity<?> getAllStores() {
+    public ResponseEntity<?> getAllStores(Pageable pageable) {
         return Response.successResponse("get all stores", storeService.getAllStores());
     }
 

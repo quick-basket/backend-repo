@@ -2,6 +2,9 @@ package com.grocery.quickbasket.products.controller;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -81,16 +84,26 @@ public class ProductController {
         return Response.successResponse("fetched products", getProductResponseDto);
     }
 
-    @GetMapping
-    public ResponseEntity<?> getAllProducts() {
-        return Response.successResponse("get all products", productService.getAllProducts());
+    @GetMapping("/stores/{storeId}")
+    public ResponseEntity<?> getAllProductsByStoreId(
+        @PathVariable Long storeId,  
+        @RequestParam(defaultValue = "0") int page, 
+        @RequestParam(defaultValue = "5") int size
+        ) {
+            Pageable pageable = PageRequest.of(page, size);
+        return Response.successResponse("get all products", productService.getAllProductsByStoreId(storeId, pageable));
 
     }
-    // @GetMapping("/stores")
-    // public ResponseEntity<List<ProductListResponseDto>> getAllProductsByStoreId() {
-    //     return ResponseEntity.ok(productService.getAllProducts());
-    // }
 
+     @GetMapping
+    public ResponseEntity<?> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        return Response.successResponse("get all products", productService.getAllProducts(pageable));
+    }
+    
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

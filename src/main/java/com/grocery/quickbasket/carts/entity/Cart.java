@@ -1,21 +1,23 @@
-package com.grocery.quickbasket.products.entity;
+package com.grocery.quickbasket.carts.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import com.grocery.quickbasket.inventory.entity.Inventory;
-import com.grocery.quickbasket.productCategory.entity.ProductCategory;
+import com.grocery.quickbasket.user.entity.User;
 
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -27,32 +29,36 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "products")
-public class Product {
+@Table(name = "carts")
+public class Cart {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(nullable = false)
-    private BigDecimal price;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
-    private ProductCategory category;
+    @JoinColumn(name = "inventory_id")
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Inventory inventory;
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Inventory> inventories;
+    @Column(name = "price")
+    private BigDecimal price;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "discount_price")
+    private BigDecimal discountPrice;
+
+    @Column(name = "quantity")
+    private int quantity;
+
+    @ColumnDefault("CURRENT_TIMESTAMP")
+    @Column(name = "created_at")
     private Instant createdAt;
 
+    @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updated_at")
     private Instant updatedAt;
 
@@ -61,16 +67,16 @@ public class Product {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = Instant.now();
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = Instant.now();
+        this.updatedAt = Instant.now();
     }
 
-    public void softDelete() {
+    public void onDelete() {
         this.deletedAt = Instant.now();
     }
-
 }
