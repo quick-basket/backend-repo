@@ -6,12 +6,16 @@ import com.grocery.quickbasket.auth.dto.SocialLoginRespDto;
 import com.grocery.quickbasket.auth.repository.AuthRedisRepository;
 import com.grocery.quickbasket.auth.service.AuthService;
 import com.grocery.quickbasket.email.service.EmailService;
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.EmailAlreadyExistException;
 import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.exceptions.PasswordNotMatchException;
+import com.grocery.quickbasket.referrals.entity.Referrals;
+import com.grocery.quickbasket.referrals.repository.ReferralRepository;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.entity.User;
+import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.user.service.UserService;
 import lombok.extern.java.Log;
 import org.springframework.security.core.Authentication;
@@ -38,13 +42,17 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthRedisRepository authRedisRepository;
     private final EmailService emailService;
+    private final UserRepository userRepository;
+    private final ReferralRepository referralRepository;
 
-    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService) {
+    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService, UserRepository userRepository, ReferralRepository  referralRepository) {
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.authRedisRepository = authRedisRepository;
         this.emailService = emailService;
+        this.userRepository = userRepository;
+        this. referralRepository = referralRepository;
     }
 
     @Transactional
@@ -64,6 +72,10 @@ public class AuthServiceImpl implements AuthService {
         newUser.setPhone(registerReqDto.getPhone());
         newUser.setIsVerified(false);
         userService.save(newUser);
+
+        if (registerReqDto.getReferralCode() != null) {
+            handleNewRegistrationWithReferral(newUser, registerReqDto.getReferralCode());
+        }
 
         sendVerificationEmail(newUser.getEmail(), AuthRedisRepository.REGISTRATION_PREFIX, "verify");
 
@@ -199,5 +211,23 @@ public class AuthServiceImpl implements AuthService {
         return "Password successfully reset";
 
     }
+
+    @Transactional
+    @Override
+    public void handleNewRegistrationWithReferral(User newUser, String referralCode) {
+        User referringUser = userRepository.findByReferralCode(referralCode)
+                .orElseThrow(() -> new DataNotFoundException("Referring user not found"));
+
+        Referrals discount = new Referrals();
+        discount.setUser(newUser);
+        discount.setReferringUser(referringUser);
+        discount.setDiscountAmount(10.0);
+        referralRepository.save(discount);
+
+        Double currentPoints = referringUser.getPointsBalance() == null ? 0.0 : referringUser.getPointsBalance();
+        referringUser.setPointsBalance(currentPoints + 10000.0); 
+        userRepository.save(referringUser);
+    }
+
 }
 
