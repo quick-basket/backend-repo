@@ -11,7 +11,6 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 @EnableConfigurationProperties(RsaConfigProperties.class)
 @EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 @SpringBootApplication
-@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class BackendRepoApplication {
 
     public static void main(String[] args) {

@@ -10,6 +10,7 @@ import lombok.Data;
 public class DiscountListResponseDto {
 
     private Long id;
+    private Long inventoryId;
     private String type;
     private BigDecimal value;
     private BigDecimal minPurchase;
@@ -24,6 +25,7 @@ public class DiscountListResponseDto {
     public static DiscountListResponseDto fromEntity(Discount discount) {
         DiscountListResponseDto dto = new DiscountListResponseDto();
         dto.setId(discount.getId());
+        dto.setInventoryId(discount.getInventory().getId());
         dto.setType(discount.getType().name());
         dto.setValue(discount.getValue());
         dto.setMinPurchase(discount.getMinPurchase());
