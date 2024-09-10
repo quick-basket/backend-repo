@@ -54,11 +54,6 @@ public class User {
     @Size(max = 10)
     @Column(name = "referral_code", unique = true)
     private String referralCode;
-
-    @Column(name = "point_balance", columnDefinition = "DOUBLE DEFAULT 0")
-    private Double pointsBalance;
-
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
@@ -90,10 +85,4 @@ public class User {
         return referralCode.toString();
     }
 
-    public void deductPoints(int points) {
-        this.pointsBalance -= points;
-        if (this.pointsBalance < 0) {
-            this.pointsBalance = (double) 0;
-        }
-    }
 }

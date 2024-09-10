@@ -17,6 +17,11 @@ import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.user.service.UserService;
+import com.grocery.quickbasket.vouchers.entity.UserVoucher;
+import com.grocery.quickbasket.vouchers.entity.Voucher;
+import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
+import com.grocery.quickbasket.vouchers.repository.VoucherRepository;
+
 import lombok.extern.java.Log;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -27,6 +32,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -42,17 +48,21 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthRedisRepository authRedisRepository;
     private final EmailService emailService;
-    private final UserRepository userRepository;
     private final ReferralRepository referralRepository;
+    private final UserRepository userRepository;
+    private final VoucherRepository voucherRepository;
+    private final UserVoucherRepository userVoucherRepository;
 
-    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService, UserRepository userRepository, ReferralRepository  referralRepository) {
+    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService, ReferralRepository  referralRepository, VoucherRepository voucherRepository, UserRepository userRepository, UserVoucherRepository userVoucherRepository) {
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.authRedisRepository = authRedisRepository;
         this.emailService = emailService;
-        this.userRepository = userRepository;
         this. referralRepository = referralRepository;
+        this.userRepository = userRepository;
+        this.voucherRepository = voucherRepository;
+        this.userVoucherRepository = userVoucherRepository;
     }
 
     @Transactional
@@ -212,6 +222,7 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
+    @SuppressWarnings("static-access")
     @Transactional
     @Override
     public void handleNewRegistrationWithReferral(User newUser, String referralCode) {
@@ -221,13 +232,21 @@ public class AuthServiceImpl implements AuthService {
         Referrals discount = new Referrals();
         discount.setUser(newUser);
         discount.setReferringUser(referringUser);
-        discount.setDiscountAmount(10.0);
         referralRepository.save(discount);
 
-        Double currentPoints = referringUser.getPointsBalance() == null ? 0.0 : referringUser.getPointsBalance();
-        referringUser.setPointsBalance(currentPoints + 10000.0); 
-        userRepository.save(referringUser);
-    }
+        Voucher voucher = new Voucher();
+         voucher.setCode("REFERRAL");
+         voucher.setVoucherType(voucher.getVoucherType().REFERRAL);
+         voucher.setDiscountValue(BigDecimal.valueOf(10));
+         voucher.setStartDate(Instant.now());
+         voucher.setEndDate(Instant.now().plus(14, ChronoUnit.DAYS));
+         voucherRepository.save(voucher);
 
+         UserVoucher userVoucher = new UserVoucher();
+         userVoucher.setUser(newUser);
+         userVoucher.setVoucher(voucher);
+         userVoucher.setIsUsed(false);
+         userVoucherRepository.save(userVoucher);
+    }
 }
 

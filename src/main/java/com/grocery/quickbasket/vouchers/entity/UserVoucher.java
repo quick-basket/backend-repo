@@ -1,7 +1,6 @@
-package com.grocery.quickbasket.referrals.entity;
+package com.grocery.quickbasket.vouchers.entity;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 import com.grocery.quickbasket.user.entity.User;
 
@@ -20,36 +19,31 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Data
-@NoArgsConstructor
+@NoArgsConstructor 
 @AllArgsConstructor
-@Table(name = "referrals")
-public class Referrals {
+@Table(name = "user_vouchers")
+public class UserVoucher {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "referrer_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "referred_id", nullable = false)
-    private User referringUser;
+    @JoinColumn(name = "voucher_id", nullable = false)
+    private Voucher voucher;
 
     @Column(name = "is_used")
-    private boolean isUsed;
+    private Boolean isUsed;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
-    
-    @Column(name = "expired_at", nullable = false)
-    private Instant expiredAt;
+    @Column(name = "used_at")
+    private Instant usedAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = Instant.now();
-        expiredAt = createdAt.plus(90, ChronoUnit.DAYS);
+        this.usedAt = Instant.now();
     }
 }
