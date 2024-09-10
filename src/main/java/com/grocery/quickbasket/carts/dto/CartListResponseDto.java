@@ -2,11 +2,12 @@ package com.grocery.quickbasket.carts.dto;
 
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.List;
 
 import com.grocery.quickbasket.carts.entity.Cart;
 
 @Data
-public class CartResponseDto {
+public class CartListResponseDto {
     private Long id;
     private Long userId;
     private Long inventoryId;
@@ -15,9 +16,10 @@ public class CartResponseDto {
     private BigDecimal price;
     private BigDecimal discountPrice;
     private int quantity;
+    private List<String> imageUrls;
 
-    public static CartResponseDto mapToDto (Cart cart) {
-        CartResponseDto dto = new CartResponseDto();
+    public static CartListResponseDto mapToDto(Cart cart, List<String> imageUrls) {
+        CartListResponseDto dto = new CartListResponseDto();
         dto.setId(cart.getId());
         dto.setUserId(cart.getUser().getId());
         dto.setInventoryId(cart.getInventory().getId());
@@ -26,6 +28,8 @@ public class CartResponseDto {
         dto.setPrice(cart.getPrice());
         dto.setDiscountPrice(cart.getDiscountPrice());
         dto.setQuantity(cart.getQuantity());
+        dto.setImageUrls(imageUrls);
         return dto;
     }
+    
 }
