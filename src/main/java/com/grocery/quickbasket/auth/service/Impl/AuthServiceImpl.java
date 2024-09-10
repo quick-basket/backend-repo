@@ -32,7 +32,6 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -234,17 +233,11 @@ public class AuthServiceImpl implements AuthService {
         discount.setReferringUser(referringUser);
         referralRepository.save(discount);
 
-        Voucher voucher = new Voucher();
-         voucher.setCode("REFERRAL");
-         voucher.setVoucherType(voucher.getVoucherType().REFERRAL);
-         voucher.setDiscountValue(BigDecimal.valueOf(10));
-         voucher.setStartDate(Instant.now());
-         voucher.setEndDate(Instant.now().plus(14, ChronoUnit.DAYS));
-         voucherRepository.save(voucher);
-
+        Voucher voucherReferrals = voucherRepository.findByCode("REFERRAL")
+            .orElseThrow(() -> new DataNotFoundException("Referring referral not found"));; 
          UserVoucher userVoucher = new UserVoucher();
          userVoucher.setUser(newUser);
-         userVoucher.setVoucher(voucher);
+         userVoucher.setVoucher(voucherReferrals);
          userVoucher.setIsUsed(false);
          userVoucherRepository.save(userVoucher);
     }

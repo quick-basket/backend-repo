@@ -10,4 +10,5 @@ import com.grocery.quickbasket.vouchers.entity.Voucher;
 public interface VoucherRepository extends JpaRepository<Voucher, Long>{
     List<Voucher> findAllByDeletedAtIsNull();
     Optional<Voucher> findByIdAndDeletedAtIsNull(Long id);
+    Optional<Voucher> findByCode(String code);
 }
