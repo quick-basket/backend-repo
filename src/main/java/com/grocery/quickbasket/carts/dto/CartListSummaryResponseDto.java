@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import com.grocery.quickbasket.carts.entity.Cart;
 
 @Data
-public class CartResponseDto {
+public class CartListSummaryResponseDto {
     private Long id;
     private Long userId;
     private Long inventoryId;
@@ -16,8 +16,8 @@ public class CartResponseDto {
     private BigDecimal discountPrice;
     private int quantity;
 
-    public static CartResponseDto mapToDto (Cart cart) {
-        CartResponseDto dto = new CartResponseDto();
+    public static CartListSummaryResponseDto mapToDto(Cart cart) {
+        CartListSummaryResponseDto dto = new CartListSummaryResponseDto();
         dto.setId(cart.getId());
         dto.setUserId(cart.getUser().getId());
         dto.setInventoryId(cart.getInventory().getId());
@@ -28,4 +28,5 @@ public class CartResponseDto {
         dto.setQuantity(cart.getQuantity());
         return dto;
     }
+    
 }
