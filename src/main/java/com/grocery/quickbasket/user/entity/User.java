@@ -1,11 +1,11 @@
 package com.grocery.quickbasket.user.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 
 @Data
@@ -51,11 +51,14 @@ public class User {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
-
+    @Size(max = 10)
+    @Column(name = "referral_code", unique = true)
+    private String referralCode;
     @PrePersist
     protected void onCreate() {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
+        this.referralCode = generateReferralCode();
     }
 
     @PreUpdate
@@ -70,4 +73,16 @@ public class User {
     public boolean isDeleted() {
         return this.deletedAt != null;
     }
+
+    private String generateReferralCode() {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder referralCode = new StringBuilder();
+
+        for (int i = 0; i < 8; i++) {
+            referralCode.append(characters.charAt(random.nextInt(characters.length())));
+        }
+        return referralCode.toString();
+    }
+
 }

@@ -1,6 +1,5 @@
 package com.grocery.quickbasket.user.dto;
 
-import com.grocery.quickbasket.user.entity.User;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -14,5 +13,7 @@ public class RegisterReqDto {
 
     @NotBlank(message = "Phone cannot be empty")
     private String phone;
+
+    private String referralCode; 
 
 }
