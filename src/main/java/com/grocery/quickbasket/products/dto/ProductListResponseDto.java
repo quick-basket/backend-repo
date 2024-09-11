@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
+import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.products.entity.Product;
 
 import lombok.Data;
@@ -12,6 +13,7 @@ import lombok.Data;
 public class ProductListResponseDto {
 
     private Long id;
+    private Long inventoryId;
     private String name;
     private String description;
     private BigDecimal price;
@@ -22,9 +24,10 @@ public class ProductListResponseDto {
     private List<Long> imageIds;
     private DiscountProductListDto discount;
 
-     public static ProductListResponseDto convertToDto(Product product) {
+     public static ProductListResponseDto convertToDto(Product product, Inventory inventory) {
         ProductListResponseDto dto = new ProductListResponseDto();
         dto.setId(product.getId());
+        dto.setInventoryId(inventory.getId());
         dto.setName(product.getName());
         dto.setDescription(product.getDescription());
         dto.setPrice(product.getPrice());
