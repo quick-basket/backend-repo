@@ -9,6 +9,7 @@ import com.grocery.quickbasket.user.entity.User;
 
 public interface UserService {
     User findByEmail(String email);
+    User findById(Long id);
     void save(User user);
     boolean existsByEmail(String email);
     User saveUserFromSocialLogin(PayloadSocialLoginReqDto payloadSocialLoginReqDto);
