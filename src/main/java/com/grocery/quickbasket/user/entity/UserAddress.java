@@ -22,9 +22,9 @@ public class UserAddress {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @NotNull
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Size(max = 255)
     @Column(name = "address")
@@ -36,15 +36,11 @@ public class UserAddress {
 
     @Size(max = 100)
     @Column(name = "state", length = 100)
-    private String state;
+    private String province;
 
     @Size(max = 20)
     @Column(name = "postal_code", length = 20)
     private String postalCode;
-
-    @Size(max = 100)
-    @Column(name = "country", length = 100)
-    private String country;
 
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
@@ -60,5 +56,15 @@ public class UserAddress {
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
 }

@@ -20,6 +20,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(UserAddressAlreadyExistException.class)
+    public final ResponseEntity<Response<String>> handleUserAddressAlreadyExistException(UserAddressAlreadyExistException ex){
+        return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(StoreNameSameException.class)
     public final ResponseEntity<Response<String>> handleStoreNameSameException(StoreNameSameException ex){
         return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
