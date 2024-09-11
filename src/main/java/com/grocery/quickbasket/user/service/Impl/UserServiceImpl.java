@@ -2,6 +2,7 @@ package com.grocery.quickbasket.user.service.Impl;
 
 import com.grocery.quickbasket.auth.dto.PayloadSocialLoginReqDto;
 import com.grocery.quickbasket.auth.helper.Claims;
+import com.grocery.quickbasket.cloudinary.service.CloudinaryService;
 import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.exceptions.UserIdNotFoundException;
 import com.grocery.quickbasket.user.dto.UpdateUserDto;
@@ -11,6 +12,7 @@ import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.user.service.UserService;
 import lombok.extern.java.Log;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 
@@ -18,9 +20,11 @@ import java.util.Optional;
 @Log
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository, CloudinaryService cloudinaryService) {
         this.userRepository = userRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Override
@@ -86,6 +90,28 @@ public class UserServiceImpl implements UserService {
         }
         currentUser.setName(dto.getName());
         currentUser.setPhone(dto.getPhoneNumber());
+        userRepository.save(currentUser);
+        return UserDto.fromUser(currentUser);
+    }
+
+    @Override
+    public UserDto updateProfileImage(MultipartFile profileImage) {
+        var claims = Claims.getClaimsFromJwt();
+        String currentUserEmail = (String) claims.get("sub");
+
+        User currentUser = findByEmail(currentUserEmail);
+        if (currentUser == null) {
+            throw new EmailNotExistException("user is not found");
+        }
+
+        // Upload profile image to Cloudinary
+        if (profileImage != null && !profileImage.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadProfileUserImage(profileImage);
+            currentUser.setImgProfile(imageUrl); // Update user's profile image URL
+        } else {
+            throw new IllegalArgumentException("Profile image is required");
+        }
+
         userRepository.save(currentUser);
         return UserDto.fromUser(currentUser);
     }
