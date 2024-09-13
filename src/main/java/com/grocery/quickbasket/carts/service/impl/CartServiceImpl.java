@@ -132,6 +132,8 @@ public CartSummaryResponseDto getCartSummary(Long selectedUserVoucherId) {
         totalDiscountPrice = totalDiscountPrice.add(itemTotalDiscountPrice);
     }
 
+    totalDiscount = totalPrice.subtract(totalDiscountPrice);
+
     List<AvailableUserVoucherDto> availableVouchers = getAvailableVouchers(userId, totalPrice);
 
     AvailableUserVoucherDto selectedVoucher = null;
