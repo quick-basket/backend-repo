@@ -46,6 +46,10 @@ public class VoucherController {
     public ResponseEntity<?>getAllVouchers() {
         return Response.successResponse("get all vouchers", voucherService.getAllVouchers());
     }
+    @GetMapping("/user")
+    public ResponseEntity<?>geVoucherByUserId() {
+        return Response.successResponse("get all vouchers", voucherService.getAllVouchersByUserId());
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVoucher(@PathVariable Long id) {
