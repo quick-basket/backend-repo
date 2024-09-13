@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import java.util.List;
 
+import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
 import com.grocery.quickbasket.products.entity.Product;
 
 import lombok.Data;
@@ -21,6 +22,7 @@ public class ProductResponseDto {
     private List<String> imageUrls;
     private List<Long> imageIds;
     private Integer quantity;
+    private DiscountProductListDto discount;
     private Instant createdAt;
     private Instant updatedAt;
 

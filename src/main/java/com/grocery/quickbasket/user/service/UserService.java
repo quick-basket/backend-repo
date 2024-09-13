@@ -6,6 +6,7 @@ import com.grocery.quickbasket.user.dto.RegisterRespDto;
 import com.grocery.quickbasket.user.dto.UpdateUserDto;
 import com.grocery.quickbasket.user.dto.UserDto;
 import com.grocery.quickbasket.user.entity.User;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
     User findByEmail(String email);
@@ -16,4 +17,6 @@ public interface UserService {
     boolean isUserSocialLogin(String email);
     UserDto getUserProfile();
     UserDto updateUserProfile(UpdateUserDto dto);
+    UserDto updateProfileImage(MultipartFile profileImage);
+    User getCurrentUser();
 }

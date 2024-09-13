@@ -26,6 +26,8 @@ public class UserAddress {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    private String name;
+
     @Size(max = 255)
     @Column(name = "address")
     private String address;
@@ -36,7 +38,7 @@ public class UserAddress {
 
     @Size(max = 100)
     @Column(name = "state", length = 100)
-    private String province;
+    private String state;
 
     @Size(max = 20)
     @Column(name = "postal_code", length = 20)
