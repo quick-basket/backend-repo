@@ -26,6 +26,8 @@ public class UserAddress {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    private String name;
+
     @Size(max = 255)
     @Column(name = "address")
     private String address;

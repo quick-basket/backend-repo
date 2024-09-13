@@ -30,7 +30,7 @@ public class CartController {
         this.cartService = cartService;
     }
 
-    @PostMapping("/create")
+    @PostMapping()
     public ResponseEntity<?> createCart(@RequestBody CartRequestDto requestDto) {
         CartResponseDto createdCart = cartService.createCart(requestDto);
         return Response.successResponse("cart created", createdCart);
