@@ -221,7 +221,6 @@ public class AuthServiceImpl implements AuthService {
 
     }
 
-    @SuppressWarnings("static-access")
     @Transactional
     @Override
     public void handleNewRegistrationWithReferral(User newUser, String referralCode) {

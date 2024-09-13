@@ -5,12 +5,16 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.products.entity.Product;
 import com.grocery.quickbasket.products.repository.ProductRepository;
+import com.grocery.quickbasket.vouchers.dto.UserVoucherResponseDto;
 import com.grocery.quickbasket.vouchers.dto.VoucherRequestDto;
 import com.grocery.quickbasket.vouchers.dto.VoucherResponseDto;
+import com.grocery.quickbasket.vouchers.entity.UserVoucher;
 import com.grocery.quickbasket.vouchers.entity.Voucher;
+import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 import com.grocery.quickbasket.vouchers.repository.VoucherRepository;
 import com.grocery.quickbasket.vouchers.service.VoucherService;
 
@@ -19,10 +23,12 @@ public class VoucherServiceImpl implements VoucherService{
 
     private final VoucherRepository voucherRepository;
     private final ProductRepository productRepository;
+    private final UserVoucherRepository userVoucherRepository;
 
-    public VoucherServiceImpl(VoucherRepository voucherRepository, ProductRepository productRepository) {
+    public VoucherServiceImpl(VoucherRepository voucherRepository, ProductRepository productRepository, UserVoucherRepository userVoucherRepository) {
         this.voucherRepository = voucherRepository;
         this.productRepository = productRepository;
+        this.userVoucherRepository = userVoucherRepository;
     }
 
     @Override
@@ -83,6 +89,17 @@ public class VoucherServiceImpl implements VoucherService{
             .orElseThrow(() -> new DataNotFoundException("voucher not found!"));
         existingVoucher.softDelete();
         voucherRepository.save(existingVoucher);
+    }
+
+    @Override
+    public List<UserVoucherResponseDto> getAllVouchersByUserId() {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+        List<UserVoucher> userVouchers = userVoucherRepository.findByUserIdAndIsUsedFalse(userId);
+
+        return userVouchers.stream()
+            .map(UserVoucherResponseDto::mapToDto)
+            .collect(Collectors.toList());
     }
 
 }
