@@ -18,4 +18,5 @@ public interface UserService {
     UserDto getUserProfile();
     UserDto updateUserProfile(UpdateUserDto dto);
     UserDto updateProfileImage(MultipartFile profileImage);
+    User getCurrentUser();
 }

@@ -11,4 +11,5 @@ public interface UserAddressService {
     String deleteUserAddress(Long id);
     UserAddressDto updateUserAddress(Long id, UserAddressDto userAddressDto);
     UserAddressDto setPrimaryAddress(Long addressId);
+    UserAddressDto getPrimaryAddress();
 }
