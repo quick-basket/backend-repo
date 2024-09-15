@@ -27,4 +27,6 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
     void resetPrimaryForUser(Long userId);
 
     Optional<UserAddress> findFirstByUserIdAndIdNot(Long userId, Long addressId);
+
+    Optional<UserAddress> findByIsPrimaryIsTrue();
 }

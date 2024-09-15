@@ -114,4 +114,12 @@ public class UserAddressImpl implements UserAddressService {
         addressRepository.save(newPrimaryAddress);
         return UserAddressDto.fromEntity(newPrimaryAddress);
     }
+
+    @Override
+    public UserAddressDto getPrimaryAddress() {
+        UserAddress primaryAddress = addressRepository.findByIsPrimaryIsTrue()
+                .orElseThrow(() -> new DataNotFoundException("Primary Address Not Found"));
+
+        return UserAddressDto.fromEntity(primaryAddress);
+    }
 }

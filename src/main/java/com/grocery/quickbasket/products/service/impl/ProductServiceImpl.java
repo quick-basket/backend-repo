@@ -230,7 +230,7 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
         dto.setPrice(product.getPrice());
         dto.setCategoryId(product.getCategory().getId());
         dto.setCategoryName(product.getCategory().getName());
-
+      
         List<ProductImage> images = productImageRepository.findByProduct(product);
         List<String> imageUrls = images.stream()
             .map(ProductImage::getImageUrl)
@@ -245,7 +245,6 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
             .mapToInt(Inventory::getQuantity)
             .sum();
         dto.setQuantity(totalQuantity);
-
         dto.setInventoryId(productInventories.get(0).getId());
 
         List<Discount> discounts = productInventories.stream()
@@ -287,7 +286,6 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
     }
     return new PageImpl<>(responseDtos, pageable, inventories.getTotalElements());
 }
-
     @Override
     public void deleteProduct(Long id) {
         Product existingProduct = productRepository.findByIdAndDeletedAtIsNull(id)
