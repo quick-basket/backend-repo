@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.grocery.quickbasket.carts.dto.CartListResponseDto;
-import com.grocery.quickbasket.carts.dto.CartListSummaryResponseDto;
 import com.grocery.quickbasket.carts.dto.CartRequestDto;
 import com.grocery.quickbasket.carts.dto.CartResponseDto;
 import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
@@ -30,7 +30,7 @@ public class CartController {
         this.cartService = cartService;
     }
 
-    @PostMapping("/create")
+    @PostMapping()
     public ResponseEntity<?> createCart(@RequestBody CartRequestDto requestDto) {
         CartResponseDto createdCart = cartService.createCart(requestDto);
         return Response.successResponse("cart created", createdCart);
@@ -55,8 +55,8 @@ public class CartController {
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<?> getCartSummary() {
-        CartSummaryResponseDto responseDto = cartService.getCartSummary();
+    public ResponseEntity<?> getCartSummary(@RequestParam(required = false) Long selectedUserVoucherId) {
+        CartSummaryResponseDto responseDto = cartService.getCartSummary(selectedUserVoucherId);
         return Response.successResponse("fetched all carts", responseDto);
     }
 }

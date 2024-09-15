@@ -116,4 +116,12 @@ public class UserServiceImpl implements UserService {
         return UserDto.fromUser(currentUser);
     }
 
+    @Override
+    public User getCurrentUser() {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        return findById(userId);
+    }
+
 }

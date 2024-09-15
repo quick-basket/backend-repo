@@ -35,8 +35,10 @@ public class VoucherResponseDto {
         dto.setMinPurchase(voucher.getMinPurchase());
         dto.setStartDate(voucher.getStartDate());
         dto.setEndDate(voucher.getEndDate());
-        dto.setProductId(voucher.getProduct().getId());
-        dto.setProductName(voucher.getProduct().getName());
+        if (voucher.getProduct() != null) {
+            dto.setProductId(voucher.getProduct().getId());
+            dto.setProductName(voucher.getProduct().getName());
+        }
         dto.setCreatedAt(voucher.getCreatedAt());
         dto.setUpdatedAt(voucher.getUpdatedAt());
         return dto;

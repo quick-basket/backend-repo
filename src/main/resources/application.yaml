@@ -43,3 +43,10 @@ cloudinary:
 rsa:
   private-key: certs/private-key.pem
   public-key: certs/public-key.pem
+
+midtrans:
+  server:
+    key: ${MIDTRANS_SERVER_KEY}
+  client:
+    key: ${MIDTRANS_CLIENT_KEY}
+

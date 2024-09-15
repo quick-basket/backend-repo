@@ -167,7 +167,43 @@ public class ProductServiceImpl implements ProductService {
         int totalQuantity = inventories.stream()
             .mapToInt(Inventory::getQuantity)
             .sum();
+            List<Discount> discounts = inventories.stream()
+            .filter(inventory -> inventory.getProduct().getId().equals(product.getId()))
+            .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
+            .distinct()
+            .collect(Collectors.toList());
+        DiscountType discountType = null;
+        BigDecimal discountValue = BigDecimal.ZERO;
+        BigDecimal discountPrice = product.getPrice();
+
+        if (!discounts.isEmpty()) {
+            for (Discount discount : discounts) {
+                discountType = discount.getType();
+                switch (discountType) {
+                    case PERCENTAGE:
+                        discountValue = discount.getValue();
+                        discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                        break;
+                    case FIXED:
+                        discountValue = discount.getValue();
+                        discountPrice = product.getPrice().subtract(discountValue);
+                        break;
+                    case BUY_ONE_GET_ONE:
+                        discountValue = BigDecimal.ZERO;
+                        break;
+                }
+            }
+        } else {
+            discountValue = BigDecimal.ZERO;
+            discountPrice = product.getPrice();
+        }
+        DiscountProductListDto discountDto = new DiscountProductListDto();
+            discountDto.setDiscountType(discountType);
+            discountDto.setDiscountValue(discountValue);
+            discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
+
         ProductResponseDto responseDto = ProductResponseDto.mapToDto(product);
+        responseDto.setDiscount(discountDto);
         responseDto.setImageIds(imageIds);
         responseDto.setImageUrls(imageUrls);
         responseDto.setQuantity(totalQuantity);
@@ -175,90 +211,81 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageable pageable) {
+public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageable pageable) {
+    Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
+    List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
-        // Mendapatkan halaman inventaris berdasarkan storeId
-        Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
-        List<Product> products = inventories.stream()
-            .map(Inventory::getProduct)
+    Map<Long, List<Inventory>> productInventoryMap = inventories.getContent().stream()
+        .collect(Collectors.groupingBy(inventory -> inventory.getProduct().getId()));
+
+    for (Map.Entry<Long, List<Inventory>> entry : productInventoryMap.entrySet()) {
+        List<Inventory> productInventories = entry.getValue();
+        
+        Product product = productInventories.get(0).getProduct();
+        
+        ProductListResponseDto dto = new ProductListResponseDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setDescription(product.getDescription());
+        dto.setPrice(product.getPrice());
+        dto.setCategoryId(product.getCategory().getId());
+        dto.setCategoryName(product.getCategory().getName());
+      
+        List<ProductImage> images = productImageRepository.findByProduct(product);
+        List<String> imageUrls = images.stream()
+            .map(ProductImage::getImageUrl)
+            .collect(Collectors.toList());
+        List<Long> imageIds = images.stream()
+            .map(ProductImage::getId)
+            .collect(Collectors.toList());
+        dto.setImageUrls(imageUrls);
+        dto.setImageIds(imageIds);
+
+        int totalQuantity = productInventories.stream()
+            .mapToInt(Inventory::getQuantity)
+            .sum();
+        dto.setQuantity(totalQuantity);
+        dto.setInventoryId(productInventories.get(0).getId());
+
+        List<Discount> discounts = productInventories.stream()
+            .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
             .distinct()
             .collect(Collectors.toList());
-        List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
-        for (Product product : products) {
-            ProductListResponseDto dto = new ProductListResponseDto();
-            dto.setId(product.getId());
-            dto.setName(product.getName());
-            dto.setDescription(product.getDescription());
-            dto.setPrice(product.getPrice());
-            dto.setCategoryId(product.getCategory().getId());
-            dto.setCategoryName(product.getCategory().getName());
+        DiscountType discountType = null;
+        BigDecimal discountValue = BigDecimal.ZERO;
+        BigDecimal discountPrice = product.getPrice();
 
-            // Mengambil gambar produk
-            List<ProductImage> images = productImageRepository.findByProduct(product);
-            List<String> imageUrls = images.stream()
-                .map(ProductImage::getImageUrl)
-                .collect(Collectors.toList());
-            List<Long> imageIds = images.stream()
-                .map(ProductImage::getId)
-                .collect(Collectors.toList());
-            dto.setImageUrls(imageUrls);
-            dto.setImageIds(imageIds);
-
-            // Menghitung total inventaris untuk produk ini
-            int totalQuantity = inventories.stream()
-                .filter(inventory -> inventory.getProduct().getId().equals(product.getId()))
-                .mapToInt(Inventory::getQuantity)
-                .sum();
-            dto.setQuantity(totalQuantity);
-
-            // Mengambil diskon terkait produk dari inventaris
-            List<Discount> discounts = inventories.stream()
-                .filter(inventory -> inventory.getProduct().getId().equals(product.getId())) // Filter berdasarkan productId
-                .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
-                .distinct()
-                .collect(Collectors.toList());
-            // Inisialisasi nilai diskon dan harga diskon
-            DiscountType discountType = null;
-            BigDecimal discountValue = BigDecimal.ZERO;
-            BigDecimal discountPrice = product.getPrice();
-
-            if (!discounts.isEmpty()) {
-                for (Discount discount : discounts) {
-                    discountType = discount.getType();
-                    switch (discountType) {
-                        case PERCENTAGE:
-                            discountValue = discount.getValue();
-                            discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
-                            break;
-                        case FIXED:
-                            discountValue = discount.getValue();
-                            discountPrice = product.getPrice().subtract(discountValue);
-                            break;
-                        case BUY_ONE_GET_ONE:
-                            discountValue = BigDecimal.ZERO;
-                            // Handling BOGO can be different based on your requirement
-                            break;
-                    }
+        if (!discounts.isEmpty()) {
+            for (Discount discount : discounts) {
+                discountType = discount.getType();
+                switch (discountType) {
+                    case PERCENTAGE:
+                        discountValue = discount.getValue();
+                        discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                        break;
+                    case FIXED:
+                        discountValue = discount.getValue();
+                        discountPrice = product.getPrice().subtract(discountValue);
+                        break;
+                    case BUY_ONE_GET_ONE:
+                        discountValue = BigDecimal.ZERO;
+                        break;
                 }
-            } else {
-                discountValue = BigDecimal.ZERO;
-                discountPrice = product.getPrice();
             }
-            DiscountProductListDto discountDto = new DiscountProductListDto();
-            discountDto.setDiscountType(discountType);
-            discountDto.setDiscountValue(discountValue);
-            discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
-            dto.setDiscount(discountDto);
-
-            responseDtos.add(dto);
+        } else {
+            discountValue = BigDecimal.ZERO;
+            discountPrice = product.getPrice();
         }
-
-        // Menggunakan PageImpl untuk pagination hasil
-        return new PageImpl<>(responseDtos, pageable, inventories.getTotalElements());
+        DiscountProductListDto discountDto = new DiscountProductListDto();
+        discountDto.setDiscountType(discountType);
+        discountDto.setDiscountValue(discountValue);
+        discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
+        dto.setDiscount(discountDto);
+        responseDtos.add(dto);
     }
-
-    
+    return new PageImpl<>(responseDtos, pageable, inventories.getTotalElements());
+}
     @Override
     public void deleteProduct(Long id) {
         Product existingProduct = productRepository.findByIdAndDeletedAtIsNull(id)
@@ -291,6 +318,39 @@ public class ProductServiceImpl implements ProductService {
 
             return dto;
 
+        });
+    }
+
+    @Override
+    public Page<ProductListResponseDto> getProductsNotInInventory(Long storeId, Pageable pageable) {
+        List<Long> productIdsInInventory = inventoryRepository.findByStoreId(storeId)
+            .stream()
+            .map(inventory -> inventory.getProduct().getId())
+            .collect(Collectors.toList());
+    
+        Page<Product> productsNotInInventory = productRepository.findByIdNotInAndDeletedAtIsNull(productIdsInInventory, pageable);
+    
+        // Map the products to DTOs
+        return productsNotInInventory.map(product -> {
+            ProductListResponseDto dto = new ProductListResponseDto();
+            dto.setId(product.getId());
+            dto.setName(product.getName());
+            dto.setDescription(product.getDescription());
+            dto.setPrice(product.getPrice());
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+    
+            List<ProductImage> images = productImageRepository.findByProduct(product);
+            List<String> imageUrls = images.stream()
+                .map(ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+            List<Long> imageIds = images.stream()
+                .map(ProductImage::getId)
+                .collect(Collectors.toList());
+            dto.setImageIds(imageIds);
+            dto.setImageUrls(imageUrls);
+    
+            return dto;
         });
     }
 

@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.products.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -12,5 +13,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsByName(String name);
     Optional<Product> findByIdAndDeletedAtIsNull(Long id);
     Page<Product> findAllByDeletedAtIsNull(Pageable pageable);
+    Page<Product> findByIdNotInAndDeletedAtIsNull(List<Long> ids, Pageable pageable);
     
 }
