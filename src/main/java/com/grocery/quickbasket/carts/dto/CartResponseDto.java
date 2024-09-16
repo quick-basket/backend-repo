@@ -15,6 +15,7 @@ public class CartResponseDto {
     private BigDecimal price;
     private BigDecimal discountPrice;
     private int quantity;
+    private int quantityBonus;
 
     public static CartResponseDto mapToDto (Cart cart) {
         CartResponseDto dto = new CartResponseDto();
@@ -26,6 +27,7 @@ public class CartResponseDto {
         dto.setPrice(cart.getPrice());
         dto.setDiscountPrice(cart.getDiscountPrice());
         dto.setQuantity(cart.getQuantity());
+        dto.setQuantityBonus(cart.getQuantity());
         return dto;
     }
 }

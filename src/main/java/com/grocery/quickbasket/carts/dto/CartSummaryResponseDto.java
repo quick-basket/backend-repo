@@ -15,7 +15,6 @@ public class CartSummaryResponseDto {
     private BigDecimal totalPrice;
     private BigDecimal totalDiscount;
     private BigDecimal totalDiscountPrice;
-    private List<AvailableUserVoucherDto> availableVouchers;
-    private AvailableUserVoucherDto selectedVoucher;
+    // private List<AvailableUserVoucherDto> availableVouchers;
 
 }
