@@ -68,6 +68,8 @@ public class AuthController {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if ("sid".equals(cookie.getName())) {
+                    authService.logout(cookie.getValue());
+
                     cookie.setMaxAge(0);
                     cookie.setValue(null);
                     cookie.setPath("/");
