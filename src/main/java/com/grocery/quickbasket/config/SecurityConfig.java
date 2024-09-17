@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.java.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 @Configuration
@@ -37,11 +39,13 @@ public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
     private final CorsConfigurationSourceImpl corsConfigurationSource;
+    private final TokenBlacklistFilter tokenBlacklistFilter;
 
-    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, CorsConfigurationSourceImpl corsConfigurationSource) {
+    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, CorsConfigurationSourceImpl corsConfigurationSource, TokenBlacklistFilter tokenBlacklistFilter) {
         this.rsaConfigProperties = rsaConfigProperties;
         this.userDetailsService = userDetailsService;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.tokenBlacklistFilter = tokenBlacklistFilter;
     }
 
     @Bean
@@ -89,49 +93,55 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/api/v1/auth/**").permitAll();
-                    auth.requestMatchers("/api/v1/products/**").permitAll();
-                    auth.requestMatchers("/api/v1/products/stores/**").permitAll();
-                    auth.requestMatchers("/api/v1/category/**").permitAll();
-                    auth.requestMatchers("/api/v1/stores").hasAuthority("SCOPE_super_admin");
-                    auth.requestMatchers("/api/v1/stores/**").hasAuthority("SCOPE_super_admin");
-                    auth.requestMatchers("/api/v1/inventory/**").permitAll();
-                    auth.requestMatchers("/api/v1/discounts/**").permitAll();
-                    auth.requestMatchers("/api/v1/inventory-journals/**").permitAll();
-                    auth.requestMatchers("/api/v1/vouchers/**").permitAll();
-                    auth.requestMatchers("/api/v1/location/**").permitAll();
-                    /*
-                    Kalau mau tambahin Role Based access
-                    example:
-                    auth.requestMatchers(HttpMethod.GET,"api/v1/auth").hasAuthority("SCOPE_store_admin");
-
-                    SCOPE_ JANGAN LUPA DIDEPAN
-                    ITU BISA DIKASI SPESIFIK METHOD HTTPNYA, kalau yg store admin khusus get aja. super admin kasi post
-                     */
-                    auth.anyRequest().authenticated();
+                    auth.requestMatchers("/api/v1/auth/**",
+                                    "/api/v1/products/**",
+                                    "/api/v1/products/stores/**",
+                                    "/api/v1/category/**",
+                                    "/api/v1/inventory/**",
+                                    "/api/v1/discounts/**",
+                                    "/api/v1/inventory-journals/**",
+                                    "/api/v1/vouchers/**",
+                                    "/api/v1/location/**").permitAll()
+                            .requestMatchers("/api/v1/stores", "/api/v1/stores/**").hasAuthority("SCOPE_super_admin")
+                            .anyRequest().authenticated();
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .oauth2ResourceServer((oauth2) -> {
-                    oauth2.jwt((jwt) -> jwt.decoder(jwtDecoder()));
-                    oauth2.bearerTokenResolver((request) -> {
-                        Cookie[] cookies = request.getCookies();
-                        var authHeader = request.getHeader("Authorization");
-                        if (cookies != null) {
-                            for (Cookie cookie : cookies) {
-                                if ("sid".equals(cookie.getName())) {
-                                    return cookie.getValue();
-                                }
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.decoder(jwtDecoder()))
+                        .bearerTokenResolver(request -> {
+                            if (isPublicEndpoint(request)) {
+                                return null;
                             }
-                        } else if (authHeader!= null && !authHeader.isEmpty()) {
-                            return authHeader.replace("Bearer ", "");
-                        }
-                        return null;
-                    });
-                })
+
+                            Cookie[] cookies = request.getCookies();
+                            String authHeader = request.getHeader("Authorization");
+                            if (cookies != null) {
+                                for (Cookie cookie : cookies) {
+                                    if ("sid".equals(cookie.getName())) {
+                                        return cookie.getValue();
+                                    }
+                                }
+                            } else if (authHeader != null && !authHeader.isEmpty()) {
+                                return authHeader.replace("Bearer ", "");
+                            }
+                            return null;
+                        })
+                )
+                .addFilterBefore(tokenBlacklistFilter, UsernamePasswordAuthenticationFilter.class)
                 .userDetailsService(userDetailsService)
                 .httpBasic(Customizer.withDefaults())
                 .build();
-
     }
 
+    private boolean isPublicEndpoint(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/v1/auth/") ||
+                path.startsWith("/api/v1/products/") ||
+                path.startsWith("/api/v1/category/") ||
+                path.startsWith("/api/v1/inventory/") ||
+                path.startsWith("/api/v1/discounts/") ||
+                path.startsWith("/api/v1/inventory-journals/") ||
+                path.startsWith("/api/v1/vouchers/") ||
+                path.startsWith("/api/v1/location/");
+    }
 }

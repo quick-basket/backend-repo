@@ -240,5 +240,12 @@ public class AuthServiceImpl implements AuthService {
          userVoucher.setIsUsed(false);
          userVoucherRepository.save(userVoucher);
     }
+
+    @Override
+    public void logout(String token) {
+        if (token != null && !token.isEmpty()){
+            authRedisRepository.blacklistToken(token);
+        }
+    }
 }
 
