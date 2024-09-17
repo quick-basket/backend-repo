@@ -212,7 +212,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
 public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageable pageable) {
-    // Mendapatkan halaman inventaris berdasarkan storeId
     Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
     List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
@@ -222,7 +221,6 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
     for (Map.Entry<Long, List<Inventory>> entry : productInventoryMap.entrySet()) {
         List<Inventory> productInventories = entry.getValue();
         
-        // Mengambil produk dari inventori pertama
         Product product = productInventories.get(0).getProduct();
         
         ProductListResponseDto dto = new ProductListResponseDto();
@@ -232,8 +230,7 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
         dto.setPrice(product.getPrice());
         dto.setCategoryId(product.getCategory().getId());
         dto.setCategoryName(product.getCategory().getName());
-
-        // Mengambil gambar produk
+      
         List<ProductImage> images = productImageRepository.findByProduct(product);
         List<String> imageUrls = images.stream()
             .map(ProductImage::getImageUrl)
@@ -244,22 +241,17 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
         dto.setImageUrls(imageUrls);
         dto.setImageIds(imageIds);
 
-        // Menghitung total inventaris untuk produk ini
         int totalQuantity = productInventories.stream()
             .mapToInt(Inventory::getQuantity)
             .sum();
         dto.setQuantity(totalQuantity);
-
-        // Mengambil inventoryId dari inventori pertama
         dto.setInventoryId(productInventories.get(0).getId());
 
-        // Mengambil diskon terkait produk dari inventaris
         List<Discount> discounts = productInventories.stream()
             .flatMap(inventory -> discountRepository.findByInventoryId(inventory.getId()).stream())
             .distinct()
             .collect(Collectors.toList());
 
-        // Inisialisasi nilai diskon dan harga diskon
         DiscountType discountType = null;
         BigDecimal discountValue = BigDecimal.ZERO;
         BigDecimal discountPrice = product.getPrice();
@@ -290,15 +282,10 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
         discountDto.setDiscountValue(discountValue);
         discountDto.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
         dto.setDiscount(discountDto);
-
         responseDtos.add(dto);
     }
-
-    // Menggunakan PageImpl untuk pagination hasil
     return new PageImpl<>(responseDtos, pageable, inventories.getTotalElements());
 }
-
-    
     @Override
     public void deleteProduct(Long id) {
         Product existingProduct = productRepository.findByIdAndDeletedAtIsNull(id)
@@ -331,6 +318,39 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageab
 
             return dto;
 
+        });
+    }
+
+    @Override
+    public Page<ProductListResponseDto> getProductsNotInInventory(Long storeId, Pageable pageable) {
+        List<Long> productIdsInInventory = inventoryRepository.findByStoreId(storeId)
+            .stream()
+            .map(inventory -> inventory.getProduct().getId())
+            .collect(Collectors.toList());
+    
+        Page<Product> productsNotInInventory = productRepository.findByIdNotInAndDeletedAtIsNull(productIdsInInventory, pageable);
+    
+        // Map the products to DTOs
+        return productsNotInInventory.map(product -> {
+            ProductListResponseDto dto = new ProductListResponseDto();
+            dto.setId(product.getId());
+            dto.setName(product.getName());
+            dto.setDescription(product.getDescription());
+            dto.setPrice(product.getPrice());
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+    
+            List<ProductImage> images = productImageRepository.findByProduct(product);
+            List<String> imageUrls = images.stream()
+                .map(ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+            List<Long> imageIds = images.stream()
+                .map(ProductImage::getId)
+                .collect(Collectors.toList());
+            dto.setImageIds(imageIds);
+            dto.setImageUrls(imageUrls);
+    
+            return dto;
         });
     }
 

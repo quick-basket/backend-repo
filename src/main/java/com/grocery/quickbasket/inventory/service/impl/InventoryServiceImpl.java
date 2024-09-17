@@ -3,6 +3,7 @@ package com.grocery.quickbasket.inventory.service.impl;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -162,6 +163,21 @@ public InventoryResponseDto updateInventory(Long id, InventoryRequestUpdateDto u
     responseDto.setImageIds(imageIds);
     responseDto.setImageUrls(imageUrls);
     return responseDto;
+    }
+
+    @Override
+    public List<InventoryListResponseDto> getInventoryWithoutDiscountsByStoreId(Long storeId) {
+        List<Inventory> inventories = inventoryRepository.findByStoreId(storeId);
+        List<Discount> discounts = discountRepository.findAllByInventoryStoreIdAndDeletedAtIsNull(storeId);
+
+        Set<Long> inventoryIdsWithDiscounts  = discounts.stream()
+            .map(discount -> discount.getInventory().getId())
+            .collect(Collectors.toSet());
+        
+        return inventories.stream()
+            .filter(inventory -> !inventoryIdsWithDiscounts.contains(inventory.getId()))
+            .map(InventoryListResponseDto::mapToDto)
+            .collect(Collectors.toList());
     }
 
 }

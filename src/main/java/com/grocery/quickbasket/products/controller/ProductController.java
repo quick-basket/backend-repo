@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.grocery.quickbasket.products.dto.ProductListResponseDto;
 import com.grocery.quickbasket.products.dto.ProductRequestDto;
 import com.grocery.quickbasket.products.dto.ProductResponseDto;
 import com.grocery.quickbasket.products.service.ProductService;
@@ -102,6 +103,17 @@ public class ProductController {
 
         Pageable pageable = PageRequest.of(page, size);
         return Response.successResponse("get all products", productService.getAllProducts(pageable));
+    }
+    @GetMapping("/not-in-inventory")
+    public ResponseEntity<?> getProductsNotInInventory(
+            @RequestParam Long storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductListResponseDto> products = productService.getProductsNotInInventory(storeId, pageable);
+        
+        return Response.successResponse("Products not in inventory for store " + storeId, products);
     }
     
     @DeleteMapping("/{id}")

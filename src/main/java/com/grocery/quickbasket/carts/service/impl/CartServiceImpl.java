@@ -19,6 +19,8 @@ import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
 import com.grocery.quickbasket.carts.entity.Cart;
 import com.grocery.quickbasket.carts.repository.CartRepository;
 import com.grocery.quickbasket.carts.service.CartService;
+import com.grocery.quickbasket.discounts.entity.Discount;
+import com.grocery.quickbasket.discounts.repository.DiscountRepository;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.inventory.entity.Inventory;
 import com.grocery.quickbasket.inventory.repository.InventoryRepository;
@@ -32,6 +34,8 @@ import com.grocery.quickbasket.vouchers.entity.UserVoucher;
 import com.grocery.quickbasket.vouchers.entity.Voucher;
 import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -40,13 +44,15 @@ public class CartServiceImpl implements CartService {
     private final InventoryRepository inventoryRepository;
     private final ProductImageRepository productImageRepository;
     private final UserVoucherRepository userVoucherRepository;
+    private final DiscountRepository discountRepository;
 
-    public CartServiceImpl (CartRepository cartRepository, UserRepository userRepository, InventoryRepository inventoryRepository, ProductImageRepository productImageRepository, UserVoucherRepository userVoucherRepository) {
+    public CartServiceImpl (CartRepository cartRepository, UserRepository userRepository, InventoryRepository inventoryRepository, ProductImageRepository productImageRepository, UserVoucherRepository userVoucherRepository, DiscountRepository discountRepository) {
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
         this.inventoryRepository = inventoryRepository;
         this.productImageRepository = productImageRepository;
         this.userVoucherRepository = userVoucherRepository;
+        this.discountRepository = discountRepository;
     }
 
     @Override
@@ -97,6 +103,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
+    @Transactional
     public CartResponseDto createCart(CartRequestDto requestDto) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
@@ -105,14 +112,51 @@ public class CartServiceImpl implements CartService {
 
         Inventory inventory = inventoryRepository.findById(requestDto.getInventoryId())
             .orElseThrow(() -> new DataNotFoundException("Store not found for this id :: " + requestDto.getInventoryId()));
+
+        Product product = inventory.getProduct();
+        if (product == null) {
+            throw new DataNotFoundException("Product not found in inventory :: " + requestDto.getInventoryId());
+        }
+
+        List<Discount> discounts = discountRepository.findByInventoryId(requestDto.getInventoryId());
         Cart cart = new Cart();
         cart.setUser(user);
         cart.setInventory(inventory);
-        cart.setPrice(requestDto.getPrice());
-        cart.setDiscountPrice(requestDto.getDiscountPrice());
+        cart.setPrice(product.getPrice());
+
+        boolean isBOGO = false;
+        BigDecimal discountPrice = product.getPrice();
+        if (!discounts.isEmpty()) {
+            Discount discount = discounts.get(0);
+            switch (discount.getType()) {
+                case PERCENTAGE:
+                    BigDecimal discountValue = discount.getValue();
+                    discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                    break;
+                case FIXED:
+                    discountPrice = product.getPrice().subtract(discount.getValue());
+                case BUY_ONE_GET_ONE:
+                    discountPrice = product.getPrice();
+                    isBOGO = true;
+                    break;
+            }
+        }
+        cart.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
         cart.setQuantity(requestDto.getQuantity());
+        
         Cart savedCart = cartRepository.save(cart);
-        return CartResponseDto.mapToDto(savedCart);
+        if (isBOGO) {
+            Integer currentBonusItem = inventory.getBonusItem() != null ? inventory.getBonusItem() : 0;
+            inventory.setBonusItem(currentBonusItem + 1);
+            inventoryRepository.save(inventory);
+        }
+        CartResponseDto responseDto = CartResponseDto.mapToDto(savedCart);
+        if (isBOGO) {
+            responseDto.setQuantityBonus(savedCart.getQuantity() + 1);
+        } else {
+            responseDto.setQuantityBonus(savedCart.getQuantity());
+        }
+        return responseDto;
     }
 
     @Override
@@ -130,47 +174,30 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-public CartSummaryResponseDto getCartSummary(Long selectedUserVoucherId) {
-    var claims = Claims.getClaimsFromJwt();
-    Long userId = (Long) claims.get("userId");
+    public CartSummaryResponseDto getCartSummary() {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
 
-    List<Cart> carts = cartRepository.findAllByUserId(userId);
+        List<Cart> carts = cartRepository.findAllByUserId(userId);
 
-    List<CartListSummaryResponseDto> cartList = carts.stream()
-        .map(CartListSummaryResponseDto::mapToDto)
-        .collect(Collectors.toList());
+        List<CartListSummaryResponseDto> cartList = carts.stream()
+            .map(CartListSummaryResponseDto::mapToDto)
+            .collect(Collectors.toList());
 
-    BigDecimal totalPrice = BigDecimal.ZERO; 
-    BigDecimal totalDiscountPrice = BigDecimal.ZERO; 
-    BigDecimal totalDiscount = BigDecimal.ZERO; 
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        BigDecimal totalDiscountPrice = BigDecimal.ZERO;
 
-    for (CartListSummaryResponseDto cart : cartList) {
-        BigDecimal itemTotalPrice = cart.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
-        totalPrice = totalPrice.add(itemTotalPrice);
+        for (CartListSummaryResponseDto cart : cartList) {
+            BigDecimal itemTotalPrice = cart.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
+            totalPrice = totalPrice.add(itemTotalPrice);
 
-        BigDecimal itemTotalDiscountPrice = cart.getDiscountPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
-        totalDiscountPrice = totalDiscountPrice.add(itemTotalDiscountPrice);
-    }
-
-    List<AvailableUserVoucherDto> availableVouchers = getAvailableVouchers(userId, totalPrice);
-
-    AvailableUserVoucherDto selectedVoucher = null;
-    if (selectedUserVoucherId != null) {
-        selectedVoucher = availableVouchers.stream()
-            .filter(v -> v.getUserVoucherId().equals(selectedUserVoucherId))
-            .findFirst()
-            .orElse(null);
-
-        if (selectedVoucher != null) {
-            BigDecimal voucherDiscount = applyVoucher(userId, totalDiscountPrice, cartList, selectedUserVoucherId);
-
-            totalDiscount = totalDiscount.add(voucherDiscount);
-            totalDiscountPrice = totalDiscountPrice.subtract(voucherDiscount);
+            BigDecimal itemTotalDiscountPrice = cart.getDiscountPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
+            totalDiscountPrice = totalDiscountPrice.add(itemTotalDiscountPrice);
         }
-    }
+        BigDecimal totalDiscount = totalPrice.subtract(totalDiscountPrice);
 
-    return new CartSummaryResponseDto(cartList, totalPrice, totalDiscount, totalDiscountPrice, availableVouchers, selectedVoucher);
-}
+        return new CartSummaryResponseDto(cartList, totalPrice, totalDiscount, totalDiscountPrice);
+    }
 
     
 public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList, Long userVoucherId) {

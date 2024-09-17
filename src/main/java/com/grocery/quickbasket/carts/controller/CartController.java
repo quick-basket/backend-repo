@@ -60,8 +60,8 @@ public class CartController {
     }
 
     @GetMapping("/summary")
-    public ResponseEntity<?> getCartSummary(@RequestParam(required = false) Long selectedUserVoucherId) {
-        CartSummaryResponseDto responseDto = cartService.getCartSummary(selectedUserVoucherId);
+    public ResponseEntity<?> getCartSummary() {
+        CartSummaryResponseDto responseDto = cartService.getCartSummary();
         return Response.successResponse("fetched all carts", responseDto);
     }
 

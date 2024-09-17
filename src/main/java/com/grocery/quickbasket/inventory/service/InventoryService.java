@@ -16,5 +16,6 @@ public interface InventoryService {
     List<Inventory> getAllProductCategory();
     InventoryDetailResponseDto getProductById (Long inventoryId);
     List<InventoryListResponseDto> getInventoryByStoreId(Long storeId);
+    List<InventoryListResponseDto> getInventoryWithoutDiscountsByStoreId(Long storeId);
     void deleteInventory(Long id);
 }
