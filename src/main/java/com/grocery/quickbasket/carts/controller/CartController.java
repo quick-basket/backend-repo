@@ -2,6 +2,9 @@ package com.grocery.quickbasket.carts.controller;
 
 import java.util.List;
 
+import com.grocery.quickbasket.auth.helper.Claims;
+import com.grocery.quickbasket.carts.entity.Cart;
+import com.grocery.quickbasket.carts.repository.CartRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,9 +28,11 @@ import com.grocery.quickbasket.response.Response;
 public class CartController {
 
     private final CartService cartService;
+    private final CartRepository cartRepository;
 
-    public CartController (CartService cartService) {
+    public CartController (CartService cartService, CartRepository cartRepository) {
         this.cartService = cartService;
+        this.cartRepository = cartRepository;
     }
 
     @PostMapping()
@@ -58,5 +63,10 @@ public class CartController {
     public ResponseEntity<?> getCartSummary() {
         CartSummaryResponseDto responseDto = cartService.getCartSummary();
         return Response.successResponse("fetched all carts", responseDto);
+    }
+
+    @GetMapping("/cart-store/{storeId}")
+    public ResponseEntity<?> getCartWithStoreId(@PathVariable Long storeId) {
+        return Response.successResponse("fetched all carts", cartService.getAllCartByUserIdWithStoreId(storeId));
     }
 }

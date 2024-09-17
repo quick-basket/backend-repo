@@ -113,13 +113,13 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
         checkoutDto.setItems(itemList);
 
-        CartSummaryResponseDto cartSummary = cartService.getCartSummary();
-        CheckoutDto.Summary summary = new CheckoutDto.Summary();
-        summary.setSubtotal(cartSummary.getTotalPrice());
-        summary.setDiscount(cartSummary.getTotalDiscount());
-        summary.setTotal(cartSummary.getTotalDiscountPrice());
-        summary.setShippingCost(BigDecimal.valueOf(5000));
-        checkoutDto.setSummary(summary);
+//        CartSummaryResponseDto cartSummary = cartService.getCartSummary();
+//        CheckoutDto.Summary summary = new CheckoutDto.Summary();
+//        summary.setSubtotal(cartSummary.getTotalPrice());
+//        summary.setDiscount(cartSummary.getTotalDiscount());
+//        summary.setTotal(cartSummary.getTotalDiscountPrice());
+//        summary.setShippingCost(BigDecimal.valueOf(5000));
+//        checkoutDto.setSummary(summary);
 
         return checkoutDto;
 
