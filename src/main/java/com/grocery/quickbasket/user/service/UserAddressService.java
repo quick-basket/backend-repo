@@ -9,7 +9,7 @@ public interface UserAddressService {
     List<UserAddressDto> getUserAddresses();
     UserAddressDto createUserAddress(UserAddressDto userAddressDto);
     String deleteUserAddress(Long id);
-    UserAddressDto updateUserAddress(Long id, UserAddressDto userAddressDto);
+    UserAddressDto updateUserAddress(UserAddressDto userAddressDto);
     UserAddressDto setPrimaryAddress(Long addressId);
     UserAddressDto getPrimaryAddress();
 }

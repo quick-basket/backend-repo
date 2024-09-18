@@ -33,7 +33,7 @@ public class AuthRedisRepository {
     }
 
     public void blacklistToken(String token){
-        valueOps.set(BLACKLIST_PREFIX + token, "blacklisted", 1, TimeUnit.HOURS);
+        valueOps.set(BLACKLIST_PREFIX + token, "blacklisted", 12, TimeUnit.HOURS);
     }
 
     public boolean isTokenBlacklisted(String token){
