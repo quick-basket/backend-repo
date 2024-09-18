@@ -51,6 +51,12 @@ public class InventoryController {
         return Response.successResponse("fetch inventory by store id", inventoryList);
     }
 
+    @GetMapping("/store/without-discount/{storeId}")
+    public ResponseEntity<?> getInventoryWithoutDiscountsByStoreId(@PathVariable Long storeId) {
+        List<InventoryListResponseDto> inventories = inventoryService.getInventoryWithoutDiscountsByStoreId(storeId);
+        return Response.successResponse("fetch inventory by store id", inventories);
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updateInventory (@PathVariable Long id, @Valid @RequestBody InventoryRequestUpdateDto updateDto) {
         InventoryResponseDto updatedInventory = inventoryService.updateInventory(id, updateDto);
