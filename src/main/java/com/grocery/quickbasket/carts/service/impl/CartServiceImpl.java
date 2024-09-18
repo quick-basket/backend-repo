@@ -174,11 +174,11 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartSummaryResponseDto getCartSummary() {
+    public CartSummaryResponseDto getCartSummary(Long storeId) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
 
-        List<Cart> carts = cartRepository.findAllByUserId(userId);
+        List<Cart> carts = cartRepository.findAllByUserIdAndInventoryStoreId(userId, storeId);
 
         List<CartListSummaryResponseDto> cartList = carts.stream()
             .map(CartListSummaryResponseDto::mapToDto)
