@@ -59,9 +59,9 @@ public class CartController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/summary")
-    public ResponseEntity<?> getCartSummary() {
-        CartSummaryResponseDto responseDto = cartService.getCartSummary();
+    @GetMapping("/summary/{storeId}")
+    public ResponseEntity<?> getCartSummary(@PathVariable Long storeId) {
+        CartSummaryResponseDto responseDto = cartService.getCartSummary(storeId);
         return Response.successResponse("fetched all carts", responseDto);
     }
 
