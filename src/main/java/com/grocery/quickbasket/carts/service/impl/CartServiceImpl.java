@@ -75,6 +75,26 @@ public class CartServiceImpl implements CartService {
             .collect(Collectors.toList());
     }
 
+    @Override
+    public List<CartListResponseDto> getAllCartByUserIdWithStoreId(Long storeId) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        List<Cart> carts = cartRepository.findAllByUserIdAndInventoryStoreId(userId, storeId);
+        return carts.stream()
+            .map(cart -> {
+                Product product = cart.getInventory().getProduct();
+
+                List<String> imageUrls = productImageRepository.findAllByProduct(product)
+                    .stream()
+                    .map(ProductImage::getImageUrl)
+                    .collect(Collectors.toList());
+
+                return CartListResponseDto.mapToDto(cart, imageUrls);
+            })
+            .collect(Collectors.toList());
+    }
+
 
 
     @Override

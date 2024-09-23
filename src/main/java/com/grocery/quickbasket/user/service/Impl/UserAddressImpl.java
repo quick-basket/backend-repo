@@ -82,8 +82,8 @@ public class UserAddressImpl implements UserAddressService {
     }
 
     @Override
-    public UserAddressDto updateUserAddress(Long id, UserAddressDto userAddressDto) {
-        UserAddress existingAddress = addressRepository.findById(id)
+    public UserAddressDto updateUserAddress(UserAddressDto userAddressDto) {
+        UserAddress existingAddress = addressRepository.findById(userAddressDto.getId())
                 .orElseThrow(() -> new DataNotFoundException("Address Not Found"));
 
         existingAddress.setAddress(userAddressDto.getAddress());

@@ -36,9 +36,9 @@ public class UserAddressController {
         return Response.successResponse("Delete address", userAddressService.deleteUserAddress(id));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateAddress(@PathVariable Long id, @RequestBody UserAddressDto dto) {
-        return Response.successResponse("Update address", userAddressService.updateUserAddress(id, dto));
+    @PutMapping()
+    public ResponseEntity<?> updateAddress(@RequestBody UserAddressDto dto) {
+        return Response.successResponse("Update address", userAddressService.updateUserAddress(dto));
     }
 
     @PutMapping("/set-primary/{id}")
