@@ -1,8 +1,15 @@
 package com.grocery.quickbasket.user.controller;
 
 import com.grocery.quickbasket.response.Response;
+import com.grocery.quickbasket.user.dto.StoreAdminRequesetDto;
 import com.grocery.quickbasket.user.dto.UpdateUserDto;
+import com.grocery.quickbasket.user.dto.UpdateUserRoleRequest;
+import com.grocery.quickbasket.user.dto.UserRoleResponseDto;
+import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.service.UserService;
+
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,5 +36,22 @@ public class UserController {
     @PostMapping("/upload-profile-image")
     public ResponseEntity<?> uploadProfileImage(@RequestParam("file") MultipartFile file) {
         return Response.successResponse("Upload success", userService.updateProfileImage(file));
+    }
+
+    @PostMapping("/create-role")
+    public ResponseEntity<?> createUserRole(@RequestBody UpdateUserRoleRequest request) {
+        UserRoleResponseDto updateDto = userService.createUserRole(request);
+        return Response.successResponse("role updated", updateDto);
+    }
+    @PutMapping("/update-role/{storeAdminId}")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long storeAdminId, @RequestBody StoreAdminRequesetDto request) {
+        UserRoleResponseDto updateDto = userService.updateUserRole(storeAdminId, request);
+        return Response.successResponse("role updated", updateDto);
+    }
+
+    @GetMapping("/not-store-admins")
+    public ResponseEntity<?> getAllUsersNotInStoreAdmins() {
+        List<User> users = userService.getAllUsersNotInStoreAdmins();
+        return Response.successResponse("gett all user", users);
     }
 }

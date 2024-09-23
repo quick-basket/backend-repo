@@ -8,6 +8,7 @@ import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderStatus;
 import com.midtrans.httpclient.error.MidtransError;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -21,4 +22,9 @@ public interface OrderService {
     Order createOrderFromCheckoutData(CheckoutDto checkoutData);
     Map<String, Object> buildMidtransRequest(Order order, CheckoutDto checkoutData);
     List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
+    BigDecimal getTotalAmountAllStore();
+    BigDecimal getTotalAmountFromOrdersLastWeek();
+    BigDecimal getTotalAmountFromOrdersLastMonth();
+    BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId);
+    BigDecimal getTotalAmountByStoreId(Long storeId);
 }
