@@ -20,4 +20,5 @@ public interface AuthService {
     String resetPassword(PasswordReqDto passwordReqDto);
     String checkUserResetPassword(String email);
     void handleNewRegistrationWithReferral(User newUser, String referralCode);
+    void logout(String token);
 }
