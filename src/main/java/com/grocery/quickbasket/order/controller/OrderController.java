@@ -30,10 +30,10 @@ public class OrderController {
         return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart());
     }
 
-    @PostMapping("/initiate")
-    public ResponseEntity<?> initiateOrder (@RequestBody CheckoutDto checkoutDto) {
+    @PostMapping("/initiate/{orderId}")
+    public ResponseEntity<?> initiateOrder (@PathVariable Long orderId) {
         try {
-            SnapTokenResponse response = orderService.initiateSnapTransaction(checkoutDto);
+            SnapTokenResponse response = orderService.initiateSnapTransaction(orderId);
             return Response.successResponse("Transaction successfully initiated", response);
         } catch (MidtransError e) {
             return Response.failedResponse(HttpStatus.BAD_REQUEST.value(), "MIDTRANS ERROR", e.getMessage());
@@ -56,9 +56,25 @@ public class OrderController {
         return Response.successResponse("success fetch all order", orders);
     }
 
-    @PutMapping("/status/{orderId}")
-    public ResponseEntity<?> updateOrderStatus (@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest request) {
-        OrderResponseDto updatedOrder = orderService.updateOrderStatus(orderId, request.getNewStatus());
-        return Response.successResponse("order status updated", updatedOrder);
+    @PostMapping("/create-pending")
+    public ResponseEntity<?> createPendingOrder(@RequestBody CheckoutDto checkoutData) {
+        OrderResponseDto pendingOrder = orderService.createOrRetrievePendingOrder(checkoutData);
+        return Response.successResponse("order created", pendingOrder);
     }
+
+    @PutMapping("/status-payment/{orderId}")
+    public ResponseEntity<?> updateOrderStatusAfterPayment(@PathVariable Long orderId, @RequestBody String paymentStatus) {
+        return Response.successResponse("order updated", orderService.updateOrderStatusAfterPayment(orderId, paymentStatus));
+    }
+
+    @PutMapping("/status/{orderId}")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest orderStatusUpdateRequest) {
+        return Response.successResponse("order updated", orderService.updateOrderStatus(orderId, orderStatusUpdateRequest.getNewStatus()));
+    }
+
+//    @PostMapping("/generate-snap-token/{orderId}")
+//    public ResponseEntity<?> generateSnapToken(@PathVariable Long orderId) throws MidtransError {
+//        SnapTokenResponse response = orderService.generateSnapToken(orderId);
+//        return Response.successResponse("Generate Snap", response);
+//    }
 }

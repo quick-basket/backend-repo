@@ -17,8 +17,11 @@ public interface OrderService {
     Order cancelOrder(Long orderId);
     List<Order> getUserOrders();
     Order getOrder(Long orderId);
-    SnapTokenResponse initiateSnapTransaction(CheckoutDto checkoutData) throws MidtransError;
+    SnapTokenResponse initiateSnapTransaction(Long orderId) throws MidtransError;
     Order createOrderFromCheckoutData(CheckoutDto checkoutData);
     Map<String, Object> buildMidtransRequest(Order order, CheckoutDto checkoutData);
     List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
+    OrderResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData);
+    OrderResponseDto updateOrderStatusAfterPayment(Long orderId, String paymentStatus);
+//    SnapTokenResponse generateSnapToken(Long orderId) throws MidtransError;
 }
