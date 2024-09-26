@@ -4,8 +4,11 @@ import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.carts.dto.CartListResponseDto;
 import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
 import com.grocery.quickbasket.carts.service.CartService;
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
 import com.grocery.quickbasket.order.dto.CheckoutDto;
+import com.grocery.quickbasket.order.dto.OrderListResponseDto;
+import com.grocery.quickbasket.order.dto.OrderResponseDto;
 import com.grocery.quickbasket.order.dto.SnapTokenResponse;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
@@ -110,21 +113,25 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
         checkoutDto.setItems(itemList);
 
-        CartSummaryResponseDto cartSummary = cartService.getCartSummary();
-        CheckoutDto.Summary summary = new CheckoutDto.Summary();
-        summary.setSubtotal(cartSummary.getTotalPrice());
-        summary.setDiscount(cartSummary.getTotalDiscount());
-        summary.setTotal(cartSummary.getTotalDiscountPrice());
-        summary.setShippingCost(BigDecimal.valueOf(5000));
-        checkoutDto.setSummary(summary);
+//        CartSummaryResponseDto cartSummary = cartService.getCartSummary();
+//        CheckoutDto.Summary summary = new CheckoutDto.Summary();
+//        summary.setSubtotal(cartSummary.getTotalPrice());
+//        summary.setDiscount(cartSummary.getTotalDiscount());
+//        summary.setTotal(cartSummary.getTotalDiscountPrice());
+//        summary.setShippingCost(BigDecimal.valueOf(5000));
+//        checkoutDto.setSummary(summary);
 
         return checkoutDto;
 
     }
 
     @Override
-    public Order updateOrderStatus(Long orderId, OrderStatus newStatus) {
-        return null;
+    public OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        Order order = orderRepository.findById(orderId) 
+            .orElseThrow(() -> new DataNotFoundException("order not found"));
+        order.setStatus(newStatus);
+        orderRepository.save(order);
+        return new OrderResponseDto().mapToDto(order);
     }
 
     @Override
@@ -234,5 +241,16 @@ public class OrderServiceImpl implements OrderService {
         }});
 
         return params;
+    }
+
+    @Override
+    public List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        List<Order> orders = orderRepository.findByStoreIdAndUserId(storeId, userId);
+        return orders.stream()
+            .map(OrderListResponseDto::mapToDto)
+            .collect(Collectors.toList());
     }
 }

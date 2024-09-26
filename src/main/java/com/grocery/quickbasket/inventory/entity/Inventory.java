@@ -56,6 +56,9 @@ public class Inventory {
     @OneToMany(mappedBy = "inventory", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Cart> carts;
 
+    @Column(name = "bonus_item", columnDefinition = "integer default 0")
+    private Integer bonusItem;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 

@@ -1,11 +1,17 @@
 package com.grocery.quickbasket.order.controller;
 
 import com.grocery.quickbasket.order.dto.CheckoutDto;
+import com.grocery.quickbasket.order.dto.OrderListResponseDto;
+import com.grocery.quickbasket.order.dto.OrderResponseDto;
+import com.grocery.quickbasket.order.dto.OrderStatusUpdateRequest;
 import com.grocery.quickbasket.order.dto.SnapTokenResponse;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.response.Response;
 import com.midtrans.httpclient.error.MidtransError;
+
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,5 +48,17 @@ public class OrderController {
         } else {
             return Response.successResponse("Order found", order);
         }
+    }
+
+    @GetMapping("/store/{storeId}")
+    public ResponseEntity<?> getAllOrderByStoreAndUserId(@PathVariable Long storeId) {
+        List<OrderListResponseDto> orders = orderService.getAllOrderByStoreIdAndUserId(storeId);
+        return Response.successResponse("success fetch all order", orders);
+    }
+
+    @PutMapping("/status/{orderId}")
+    public ResponseEntity<?> updateOrderStatus (@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest request) {
+        OrderResponseDto updatedOrder = orderService.updateOrderStatus(orderId, request.getNewStatus());
+        return Response.successResponse("order status updated", updatedOrder);
     }
 }

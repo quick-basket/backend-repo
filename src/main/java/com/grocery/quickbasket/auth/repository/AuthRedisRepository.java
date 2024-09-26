@@ -10,10 +10,14 @@ import java.util.concurrent.TimeUnit;
 public class AuthRedisRepository {
     public static final String REGISTRATION_PREFIX = "quickbasket:verification:token:";
     public static final String RESET_PREFIX = "quickbasket:reset:token:";
-    private final ValueOperations<String, String> valueOps;
+    public static final String BLACKLIST_PREFIX = "quickbasket:blacklist:token:";
 
-    public AuthRedisRepository(RedisTemplate<String, String> redisTemplate) {
+    private final ValueOperations<String, String> valueOps;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    public AuthRedisRepository(RedisTemplate<String, String> redisTemplate, RedisTemplate<String, String> redisTemplate1) {
         this.valueOps = redisTemplate.opsForValue();
+        this.redisTemplate = redisTemplate1;
     }
 
     public void saveVerificationToken(String email, String verificationToken, String prefix) {
@@ -27,4 +31,13 @@ public class AuthRedisRepository {
     public void deleteVerificationToken(String verificationToken, String prefix) {
         valueOps.getOperations().delete(prefix + verificationToken);
     }
+
+    public void blacklistToken(String token){
+        valueOps.set(BLACKLIST_PREFIX + token, "blacklisted", 12, TimeUnit.HOURS);
+    }
+
+    public boolean isTokenBlacklisted(String token){
+        return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+    }
 }
+
