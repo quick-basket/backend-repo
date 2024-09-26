@@ -8,6 +8,8 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
+import com.grocery.quickbasket.user.entity.User;
+
 import java.time.Instant;
 
 @Getter
@@ -22,8 +24,9 @@ public class StoreAdmin {
     private Long id;
 
     @NotNull
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

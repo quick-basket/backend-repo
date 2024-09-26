@@ -3,12 +3,16 @@ package com.grocery.quickbasket.store.service.impl;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import com.grocery.quickbasket.auth.helper.Claims;
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.StoreNameSameException;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
 import com.grocery.quickbasket.exceptions.UserIdNotFoundException;
+import com.grocery.quickbasket.store.dto.StoreAdminDto;
 import com.grocery.quickbasket.store.dto.StoreDto;
+import com.grocery.quickbasket.store.dto.StoreResponseDto;
 import com.grocery.quickbasket.store.repository.StoreAdminRepository;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -16,8 +20,12 @@ import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 
 import com.grocery.quickbasket.store.entity.Store;
+import com.grocery.quickbasket.store.entity.StoreAdmin;
 import com.grocery.quickbasket.store.repository.StoreRepository;
 import com.grocery.quickbasket.store.service.StoreService;
+import com.grocery.quickbasket.user.entity.User;
+import com.grocery.quickbasket.user.repository.UserRepository;
+
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -25,10 +33,12 @@ public class StoreServiceImpl implements StoreService{
 
     private final StoreRepository storeRepository;
     private final StoreAdminRepository storeAdminRepository;
+    private final UserRepository userRepository;
 
-    public StoreServiceImpl (StoreRepository storeRepository, StoreAdminRepository storeAdminRepository) {
+    public StoreServiceImpl (StoreRepository storeRepository, StoreAdminRepository storeAdminRepository, UserRepository userRepository) {
         this.storeRepository = storeRepository;
         this.storeAdminRepository = storeAdminRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -107,5 +117,31 @@ public class StoreServiceImpl implements StoreService{
         return storeRepository.calculateDistanceInKm(storeId, userLocation);
     }
 
+    @Override
+    public List<StoreResponseDto> getAllStoreNotInStoreAdmins() {
+        return storeRepository.findAllStoreNotInStoreAdmins();
+    }
+
+    @Override
+    public List<StoreAdminDto> getAllStoreAdmins() {
+        List<StoreAdmin> storeAdmins = storeAdminRepository.findByDeletedAtIsNull();
+        return storeAdmins.stream()
+            .map(StoreAdminDto::mapToDto)
+            .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteStoreAdmin(Long storeAdminId) {
+        StoreAdmin storeAdmin = storeAdminRepository.findById(storeAdminId)
+            .orElseThrow(() -> new DataNotFoundException("store admin not found for this id :: " + storeAdminId));
+        storeAdmin.softDelete();
+
+        User user = storeAdmin.getUser();
+        if (user != null && !user.isDeleted()) {
+            user.softDelete();
+        }
+        storeAdminRepository.save(storeAdmin);
+        userRepository.save(user);
+    }
 
 }
