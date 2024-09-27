@@ -205,7 +205,7 @@ public class OrderServiceImpl implements OrderService {
                     orderItem.setProduct(productRepository.findById(item.getProductId())
                             .orElseThrow(() -> new RuntimeException("Product not found")));
                     orderItem.setQuantity(item.getQuantity());
-                    orderItem.setPrice(item.getPrice());
+                    orderItem.setPrice(item.getDiscountPrice());
                     return orderItem;
                 })
                 .collect(Collectors.toList());
@@ -293,5 +293,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public BigDecimal getTotalAmountByStoreId(Long storeId) {
         return orderItemRepository.getTotalAmountByStore(storeId);
+    }
+
+    @Override
+    public BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId) {
+        return orderItemRepository.getTotalAmountByStoreAndProduct(storeId, productId);
     }
 }

@@ -22,15 +22,25 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
            "WHERE o.createdAt >= :oneMonthAgo")
     BigDecimal sumTotalAmountFromOrdersLastMonth(@Param("oneMonthAgo") Instant oneMonthAgo);
 
-    @Query("SELECT COALESCE(SUM(DISTINCT o.totalAmount), 0) FROM OrderItem oi " +
+    @Query("SELECT COALESCE(SUM(oi.quantity * oi.price), 0) FROM OrderItem oi " +
+       "JOIN oi.order o " +
+       "JOIN oi.product p " +
+       "JOIN p.category pc " +
+       "WHERE o.store.id = :storeId " +
+       "AND pc.id = :categoryId")
+BigDecimal getTotalAmountByStoreAndCategory(
+    @Param("storeId") Long storeId,
+    @Param("categoryId") Long categoryId
+);
+
+    @Query("SELECT COALESCE(SUM(oi.quantity * oi.price), 0) FROM OrderItem oi " +
            "JOIN oi.order o " +
            "JOIN oi.product p " +
-           "JOIN p.category pc " +
            "WHERE o.store.id = :storeId " +
-           "AND pc.id = :categoryId")
-    BigDecimal getTotalAmountByStoreAndCategory(
+           "AND p.id = :productId")
+    BigDecimal getTotalAmountByStoreAndProduct(
         @Param("storeId") Long storeId,
-        @Param("categoryId") Long categoryId
+        @Param("productId") Long productId
     );
 
     @Query("SELECT COALESCE(SUM(DISTINCT o.totalAmount), 0) FROM OrderItem oi " +

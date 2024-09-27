@@ -26,5 +26,6 @@ public interface OrderService {
     BigDecimal getTotalAmountFromOrdersLastWeek();
     BigDecimal getTotalAmountFromOrdersLastMonth();
     BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId);
+    BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId);
     BigDecimal getTotalAmountByStoreId(Long storeId);
 }
