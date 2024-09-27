@@ -87,6 +87,14 @@ public class OrderController {
         BigDecimal totalAmount = orderService.getTotalAmountByStoreAndCategory(storeId, categoryId);
         return Response.successResponse("get total amount", totalAmount);
     }
+
+    @GetMapping("/total-amount-storeid-productId")
+    public ResponseEntity<?> getTotalAmountByStoreAndProduct(
+            @RequestParam Long storeId,
+            @RequestParam Long productId) {
+        BigDecimal totalAmount = orderService.getTotalAmountByStoreAndProduct(storeId, productId);
+        return Response.successResponse("get total amount", totalAmount);
+    }
     @GetMapping("/total-amounts-storeid")
     public ResponseEntity<?> getTotalAmountByStoreId(
             @RequestParam Long storeId) {
