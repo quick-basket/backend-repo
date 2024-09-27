@@ -10,6 +10,7 @@ import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.response.Response;
 import com.midtrans.httpclient.error.MidtransError;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -60,5 +61,45 @@ public class OrderController {
     public ResponseEntity<?> updateOrderStatus (@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest request) {
         OrderResponseDto updatedOrder = orderService.updateOrderStatus(orderId, request.getNewStatus());
         return Response.successResponse("order status updated", updatedOrder);
+    }
+
+    @GetMapping("/total-amounts-all-store")
+    public ResponseEntity<?> getTotalAmountAllStore() {
+        BigDecimal totalAmount = orderService.getTotalAmountAllStore();
+        return Response.successResponse("get total amount", totalAmount);
+    }
+
+    @GetMapping("/total-amount-last-week")
+    public ResponseEntity<?> getTotalAmountFromOrdersLastWeek() {
+        BigDecimal totalAmount = orderService.getTotalAmountFromOrdersLastWeek();
+        return Response.successResponse("get total amount", totalAmount);
+    }
+    @GetMapping("/total-amount-last-month")
+    public ResponseEntity<?> getTotalAmountFromOrdersLastMonth() {
+        BigDecimal totalAmount = orderService.getTotalAmountFromOrdersLastMonth();
+        return Response.successResponse("get total amount", totalAmount);
+    }
+
+    @GetMapping("/total-amount-storeid-categoryid")
+    public ResponseEntity<?> getTotalAmountByStoreAndCategory(
+            @RequestParam Long storeId,
+            @RequestParam Long categoryId) {
+        BigDecimal totalAmount = orderService.getTotalAmountByStoreAndCategory(storeId, categoryId);
+        return Response.successResponse("get total amount", totalAmount);
+    }
+
+    @GetMapping("/total-amount-storeid-productId")
+    public ResponseEntity<?> getTotalAmountByStoreAndProduct(
+            @RequestParam Long storeId,
+            @RequestParam Long productId) {
+        BigDecimal totalAmount = orderService.getTotalAmountByStoreAndProduct(storeId, productId);
+        return Response.successResponse("get total amount", totalAmount);
+    }
+  
+    @GetMapping("/total-amounts-storeid")
+    public ResponseEntity<?> getTotalAmountByStoreId(
+            @RequestParam Long storeId) {
+        BigDecimal totalAmount = orderService.getTotalAmountByStoreId(storeId);
+        return Response.successResponse("get total amount", totalAmount);
     }
 }

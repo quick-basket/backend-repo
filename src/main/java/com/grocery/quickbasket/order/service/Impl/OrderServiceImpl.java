@@ -13,6 +13,7 @@ import com.grocery.quickbasket.order.dto.SnapTokenResponse;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
 import com.grocery.quickbasket.order.entity.OrderStatus;
+import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.products.repository.ProductRepository;
@@ -34,6 +35,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +53,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductService productService;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
+    private final OrderItemRepository orderItemRepository;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -58,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductService productService, ProductRepository productRepository, StoreRepository storeRepository) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductService productService, ProductRepository productRepository, StoreRepository storeRepository, OrderItemRepository orderItemRepository) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -67,6 +71,7 @@ public class OrderServiceImpl implements OrderService {
         this.productService = productService;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @Override
@@ -184,10 +189,12 @@ public class OrderServiceImpl implements OrderService {
         UserAddress shippingAddress = UserAddressDto.toEntity(addressService.getPrimaryAddress());
         order.setShippingAddress(shippingAddress);
 
+        BigDecimal shippingCost = checkoutData.getSummary().getShippingCost();
+
         // set order details
-        order.setTotalAmount(checkoutData.getSummary().getTotal());
+        order.setTotalAmount(checkoutData.getSummary().getTotal().add(shippingCost));
+        order.setShippingCost(shippingCost);
         order.setTotalAmountDiscount(checkoutData.getSummary().getDiscount());
-        order.setShippingCost(checkoutData.getSummary().getShippingCost());
         order.setStatus(OrderStatus.PENDING_PAYMENT);
 
         //Order items
@@ -198,7 +205,7 @@ public class OrderServiceImpl implements OrderService {
                     orderItem.setProduct(productRepository.findById(item.getProductId())
                             .orElseThrow(() -> new RuntimeException("Product not found")));
                     orderItem.setQuantity(item.getQuantity());
-                    orderItem.setPrice(item.getPrice());
+                    orderItem.setPrice(item.getDiscountPrice());
                     return orderItem;
                 })
                 .collect(Collectors.toList());
@@ -210,22 +217,34 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public Map<String, Object> buildMidtransRequest(Order order, CheckoutDto checkoutData) {
         Map<String, Object> params = new HashMap<>();
-
+    
+        BigDecimal totalAmount = order.getTotalAmount();
+    
         params.put("transaction_details", new HashMap<String, String>() {{
             put("order_id", order.getOrderCode());
-            put("gross_amount", order.getTotalAmount().toString());
+            put("gross_amount", totalAmount.toString());
         }});
-
+    
         List<Map<String, String>> itemDetails = checkoutData.getItems().stream()
                 .map(item -> new HashMap<String, String>() {{
                     put("id", item.getProductId().toString());
-                    put("price", item.getPrice().toString());
+                    put("price", item.getDiscountPrice().toString());
                     put("quantity", String.valueOf(item.getQuantity()));
                     put("name", item.getName());
                 }})
                 .collect(Collectors.toList());
+    
+        // Menambahkan shipping cost sebagai item terpisah
+        BigDecimal shippingCost = checkoutData.getSummary().getShippingCost();
+        Map<String, String> shippingItem = new HashMap<>();
+        shippingItem.put("id", "SHIPPING");
+        shippingItem.put("price", shippingCost.toString());
+        shippingItem.put("quantity", "1");
+        shippingItem.put("name", "Shipping Cost");
+        itemDetails.add(shippingItem);
+    
         params.put("item_details", itemDetails);
-
+    
         CheckoutDto.Recipient recipient = checkoutData.getRecipient();
         params.put("customer_details", new HashMap<String, Object>() {{
             put("first_name", recipient.getName());
@@ -239,7 +258,7 @@ public class OrderServiceImpl implements OrderService {
                 put("postal_code", recipient.getPostalCode());
             }});
         }});
-
+    
         return params;
     }
 
@@ -252,5 +271,32 @@ public class OrderServiceImpl implements OrderService {
         return orders.stream()
             .map(OrderListResponseDto::mapToDto)
             .collect(Collectors.toList());
+    }
+    @Override
+    public BigDecimal getTotalAmountAllStore() {
+        return orderItemRepository.sumTotalAmountFromAllOrders();
+    }
+    @Override
+    public BigDecimal getTotalAmountFromOrdersLastWeek() {
+        Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+        return orderItemRepository.sumTotalAmountFromOrdersLastWeek(oneWeekAgo);
+    }
+    @Override
+    public BigDecimal getTotalAmountFromOrdersLastMonth() {
+        Instant oneMonthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
+        return orderItemRepository.sumTotalAmountFromOrdersLastMonth(oneMonthAgo);
+    }
+    @Override
+    public BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId) {
+        return orderItemRepository.getTotalAmountByStoreAndCategory(storeId, categoryId);
+    }
+    @Override
+    public BigDecimal getTotalAmountByStoreId(Long storeId) {
+        return orderItemRepository.getTotalAmountByStore(storeId);
+    }
+
+    @Override
+    public BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId) {
+        return orderItemRepository.getTotalAmountByStoreAndProduct(storeId, productId);
     }
 }
