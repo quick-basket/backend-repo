@@ -43,8 +43,6 @@ BigDecimal getTotalAmountByStoreAndCategory(
         @Param("productId") Long productId
     );
 
-
-
     @Query("SELECT COALESCE(SUM(DISTINCT o.totalAmount), 0) FROM OrderItem oi " +
         "JOIN oi.order o " +
         "WHERE o.store.id = :storeId")
