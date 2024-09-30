@@ -51,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
     private final MidtransService midtransService;
+    private final OrderItemRepository orderItemRepository;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -59,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -68,6 +69,7 @@ public class OrderServiceImpl implements OrderService {
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
         this.midtransService = midtransService;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @Override
