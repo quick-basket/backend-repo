@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import com.grocery.quickbasket.order.entity.Order;
 
 import lombok.Data;
+import org.json.JSONObject;
 
 @Data
 public class OrderResponseDto {
@@ -15,6 +16,7 @@ private Long id;
     private BigDecimal totalAmount;
     private String OrderStatus;
     private String orderCode;
+    private JSONObject midtransResponse;
 
     public OrderResponseDto mapToDto(Order order) {
         OrderResponseDto dto = new OrderResponseDto();

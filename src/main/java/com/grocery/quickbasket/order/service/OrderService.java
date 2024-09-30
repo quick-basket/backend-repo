@@ -3,10 +3,11 @@ package com.grocery.quickbasket.order.service;
 import com.grocery.quickbasket.order.dto.CheckoutDto;
 import com.grocery.quickbasket.order.dto.OrderListResponseDto;
 import com.grocery.quickbasket.order.dto.OrderResponseDto;
-import com.grocery.quickbasket.order.dto.SnapTokenResponse;
+import com.grocery.quickbasket.order.dto.OrderWithMidtransResponseDto;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderStatus;
 import com.midtrans.httpclient.error.MidtransError;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,10 +19,13 @@ public interface OrderService {
     Order cancelOrder(Long orderId);
     List<Order> getUserOrders();
     Order getOrder(Long orderId);
-    SnapTokenResponse initiateSnapTransaction(CheckoutDto checkoutData) throws MidtransError;
-    Order createOrderFromCheckoutData(CheckoutDto checkoutData);
-    Map<String, Object> buildMidtransRequest(Order order, CheckoutDto checkoutData);
+//    SnapTokenResponse initiateSnapTransaction(Long orderId) throws MidtransError;
+    Order createOrderFromCheckoutData(CheckoutDto checkoutData) throws MidtransError;
     List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
+    @Transactional
+    OrderWithMidtransResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
+    OrderResponseDto updateOrderStatusAfterPayment(String orderId, String paymentStatus) throws MidtransError;
+    OrderResponseDto getOrderStatus(Long orderId) throws MidtransError;
     BigDecimal getTotalAmountAllStore();
     BigDecimal getTotalAmountFromOrdersLastWeek();
     BigDecimal getTotalAmountFromOrdersLastMonth();

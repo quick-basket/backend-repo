@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -44,6 +45,7 @@ public class UserAddress {
     @Column(name = "postal_code", length = 20)
     private String postalCode;
 
+    @JsonIgnore
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
