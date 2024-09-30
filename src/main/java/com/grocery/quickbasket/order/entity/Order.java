@@ -39,6 +39,9 @@ public class Order {
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
+    @Column(name = "midtrans_transaction_id")
+    private String midtransTransactionId;
+
     @NotNull
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;

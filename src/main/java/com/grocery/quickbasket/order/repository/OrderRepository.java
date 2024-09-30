@@ -12,4 +12,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByStoreIdAndUserId(Long storeId, Long userId);
     Optional<Order> findTopByUserIdAndStoreAndStatusOrderByCreatedAtDesc(Long userId, Store store, OrderStatus status);
+    Optional<Order> findByOrderCode(String orderCode);
 }
