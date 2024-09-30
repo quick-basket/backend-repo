@@ -9,6 +9,7 @@ import com.grocery.quickbasket.order.entity.OrderStatus;
 import com.midtrans.httpclient.error.MidtransError;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -25,4 +26,10 @@ public interface OrderService {
     OrderWithMidtransResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
     OrderResponseDto updateOrderStatusAfterPayment(String orderId, String paymentStatus) throws MidtransError;
     OrderResponseDto getOrderStatus(Long orderId) throws MidtransError;
+    BigDecimal getTotalAmountAllStore();
+    BigDecimal getTotalAmountFromOrdersLastWeek();
+    BigDecimal getTotalAmountFromOrdersLastMonth();
+    BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId);
+    BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId);
+    BigDecimal getTotalAmountByStoreId(Long storeId);
 }

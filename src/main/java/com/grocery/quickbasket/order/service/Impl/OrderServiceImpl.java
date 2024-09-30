@@ -14,6 +14,7 @@ import com.grocery.quickbasket.order.dto.OrderWithMidtransResponseDto;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
 import com.grocery.quickbasket.order.entity.OrderStatus;
+import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.products.repository.ProductRepository;
@@ -189,7 +190,7 @@ public class OrderServiceImpl implements OrderService {
                     orderItem.setProduct(productRepository.findById(item.getProductId())
                             .orElseThrow(() -> new RuntimeException("Product not found")));
                     orderItem.setQuantity(item.getQuantity());
-                    orderItem.setPrice(item.getPrice());
+                    orderItem.setPrice(item.getDiscountPrice());
                     return orderItem;
                 })
                 .collect(Collectors.toList());
@@ -320,5 +321,32 @@ public class OrderServiceImpl implements OrderService {
                 // Keep the current status if unknown
                 break;
         }
+    }
+    @Override
+    public BigDecimal getTotalAmountAllStore() {
+        return orderItemRepository.sumTotalAmountFromAllOrders();
+    }
+    @Override
+    public BigDecimal getTotalAmountFromOrdersLastWeek() {
+        Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+        return orderItemRepository.sumTotalAmountFromOrdersLastWeek(oneWeekAgo);
+    }
+    @Override
+    public BigDecimal getTotalAmountFromOrdersLastMonth() {
+        Instant oneMonthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
+        return orderItemRepository.sumTotalAmountFromOrdersLastMonth(oneMonthAgo);
+    }
+    @Override
+    public BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId) {
+        return orderItemRepository.getTotalAmountByStoreAndCategory(storeId, categoryId);
+    }
+    @Override
+    public BigDecimal getTotalAmountByStoreId(Long storeId) {
+        return orderItemRepository.getTotalAmountByStore(storeId);
+    }
+
+    @Override
+    public BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId) {
+        return orderItemRepository.getTotalAmountByStoreAndProduct(storeId, productId);
     }
 }
