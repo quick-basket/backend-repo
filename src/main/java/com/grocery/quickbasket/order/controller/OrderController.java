@@ -1,10 +1,7 @@
 package com.grocery.quickbasket.order.controller;
 
-import com.grocery.quickbasket.order.dto.CheckoutDto;
-import com.grocery.quickbasket.order.dto.OrderListResponseDto;
-import com.grocery.quickbasket.order.dto.OrderResponseDto;
-import com.grocery.quickbasket.order.dto.OrderStatusUpdateRequest;
-import com.grocery.quickbasket.order.dto.SnapTokenResponse;
+import com.grocery.quickbasket.exceptions.DataNotFoundException;
+import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.response.Response;
@@ -12,6 +9,7 @@ import com.midtrans.httpclient.error.MidtransError;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,16 +29,6 @@ public class OrderController {
         return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart());
     }
 
-    @PostMapping("/initiate")
-    public ResponseEntity<?> initiateOrder (@RequestBody CheckoutDto checkoutDto) {
-        try {
-            SnapTokenResponse response = orderService.initiateSnapTransaction(checkoutDto);
-            return Response.successResponse("Transaction successfully initiated", response);
-        } catch (MidtransError e) {
-            return Response.failedResponse(HttpStatus.BAD_REQUEST.value(), "MIDTRANS ERROR", e.getMessage());
-        }
-    }
-
     @GetMapping("/{id}")
     public ResponseEntity<?> getOrder (@PathVariable Long id) {
         Order order = orderService.getOrder(id);
@@ -57,10 +45,47 @@ public class OrderController {
         return Response.successResponse("success fetch all order", orders);
     }
 
+    @PostMapping("/create-pending")
+    public ResponseEntity<?> createPendingOrder(@RequestBody CheckoutDto checkoutData, @RequestParam String paymentType) {
+        try {
+            OrderWithMidtransResponseDto pendingOrder = orderService.createOrRetrievePendingOrder(checkoutData, paymentType);
+            return Response.successResponse("Order created or retrieved", pendingOrder);
+        } catch (MidtransError e) {
+            return Response.failedResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "MIDTRANS ERROR", e.getMessage());
+        }
+    }
+
+    @PutMapping("/status-payment/{orderId}")
+    public ResponseEntity<?> updateOrderStatusAfterPayment(@PathVariable String orderId, @RequestBody Map<String, String> payload) {
+        String paymentStatus = payload.get("paymentStatus");
+        try {
+            OrderResponseDto updatedOrder = orderService.updateOrderStatusAfterPayment(orderId, paymentStatus);
+            return Response.successResponse("Order updated", updatedOrder);
+        } catch (DataNotFoundException | MidtransError e) {
+            return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
     @PutMapping("/status/{orderId}")
-    public ResponseEntity<?> updateOrderStatus (@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest request) {
-        OrderResponseDto updatedOrder = orderService.updateOrderStatus(orderId, request.getNewStatus());
-        return Response.successResponse("order status updated", updatedOrder);
+    public ResponseEntity<?> updateOrderStatus(@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest orderStatusUpdateRequest) {
+        try {
+            OrderResponseDto updatedOrder = orderService.updateOrderStatus(orderId, orderStatusUpdateRequest.getNewStatus());
+            return Response.successResponse("Order updated", updatedOrder);
+        } catch (DataNotFoundException e) {
+            return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/cancel/{orderId}")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId) {
+        try {
+            Order cancelledOrder = orderService.cancelOrder(orderId);
+            return Response.successResponse("Order cancelled", cancelledOrder);
+        } catch (DataNotFoundException e) {
+            return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            return Response.failedResponse("Cannot cancel order", HttpStatus.BAD_REQUEST);
+        }
     }
 
     @GetMapping("/total-amounts-all-store")

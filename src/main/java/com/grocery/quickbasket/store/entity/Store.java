@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.store.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.grocery.quickbasket.store.dto.StoreDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,6 +43,7 @@ public class Store {
     @Column(name = "postal_code", nullable = false)
     private String postalCode;
 
+    @JsonIgnore
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point location;
 
