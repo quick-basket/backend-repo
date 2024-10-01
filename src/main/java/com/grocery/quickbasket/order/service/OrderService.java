@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface OrderService {
-    CheckoutDto createCheckoutSummaryFromCart();
+    CheckoutDto createCheckoutSummaryFromCart(Long userVoucherId);
     OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus);
     Order cancelOrder(Long orderId);
     List<Order> getUserOrders();
