@@ -35,7 +35,9 @@ import com.grocery.quickbasket.vouchers.entity.Voucher;
 import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class CartServiceImpl implements CartService {
 
@@ -63,14 +65,12 @@ public class CartServiceImpl implements CartService {
         List<Cart> carts = cartRepository.findAllByUserId(userId);
         return carts.stream()
             .map(cart -> {
-                Product product = cart.getInventory().getProduct();
-                
-                List<String> imageUrls = productImageRepository.findAllByProduct(product)
-                    .stream()
-                    .map(ProductImage::getImageUrl)
-                    .collect(Collectors.toList());
-
-                return CartListResponseDto.mapToDto(cart, imageUrls);
+                List<Discount> discounts = cart.getInventory().getDiscount();
+            List<String> imageUrls = productImageRepository.findAllByProduct(cart.getInventory().getProduct())
+                .stream()
+                .map(ProductImage::getImageUrl)
+                .collect(Collectors.toList());
+            return CartListResponseDto.mapToDto(cart, discounts, imageUrls);
             })
             .collect(Collectors.toList());
     }
@@ -79,18 +79,15 @@ public class CartServiceImpl implements CartService {
     public List<CartListResponseDto> getAllCartByUserIdWithStoreId(Long storeId) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
-
         List<Cart> carts = cartRepository.findAllByUserIdAndInventoryStoreId(userId, storeId);
         return carts.stream()
             .map(cart -> {
-                Product product = cart.getInventory().getProduct();
-
-                List<String> imageUrls = productImageRepository.findAllByProduct(product)
+                List<Discount> discounts = cart.getInventory().getDiscount();
+                List<String> imageUrls = productImageRepository.findAllByProduct(cart.getInventory().getProduct())
                     .stream()
                     .map(ProductImage::getImageUrl)
                     .collect(Collectors.toList());
-
-                return CartListResponseDto.mapToDto(cart, imageUrls);
+                return CartListResponseDto.mapToDto(cart, discounts, imageUrls);
             })
             .collect(Collectors.toList());
     }
@@ -118,12 +115,21 @@ public class CartServiceImpl implements CartService {
             throw new DataNotFoundException("Product not found in inventory :: " + requestDto.getInventoryId());
         }
 
-        List<Discount> discounts = discountRepository.findByInventoryId(requestDto.getInventoryId());
-        Cart cart = new Cart();
-        cart.setUser(user);
-        cart.setInventory(inventory);
-        cart.setPrice(product.getPrice());
+        Optional<Cart> existingCart = cartRepository.findByUserIdAndInventoryId(userId, requestDto.getInventoryId());
 
+        Cart cart;
+        if (existingCart.isPresent()) {
+            cart = existingCart.get();
+            cart.setQuantity(cart.getQuantity() + requestDto.getQuantity());
+        } else {
+            cart = new Cart();
+            cart.setUser(user);
+            cart.setInventory(inventory);
+            cart.setPrice(product.getPrice());
+            cart.setQuantity(requestDto.getQuantity());
+        }
+
+        List<Discount> discounts = discountRepository.findByInventoryId(requestDto.getInventoryId());
         boolean isBOGO = false;
         BigDecimal discountPrice = product.getPrice();
         if (!discounts.isEmpty()) {
@@ -132,17 +138,20 @@ public class CartServiceImpl implements CartService {
                 case PERCENTAGE:
                     BigDecimal discountValue = discount.getValue();
                     discountPrice = product.getPrice().subtract(product.getPrice().multiply(discountValue.divide(new BigDecimal(100))));
+                    cart.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_DOWN));
+
                     break;
                 case FIXED:
                     discountPrice = product.getPrice().subtract(discount.getValue());
+                    cart.setDiscountPrice(discountPrice);
+                    
                 case BUY_ONE_GET_ONE:
                     discountPrice = product.getPrice();
+                    cart.setDiscountPrice(discountPrice);
                     isBOGO = true;
                     break;
             }
         }
-        cart.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_UP));
-        cart.setQuantity(requestDto.getQuantity());
         
         Cart savedCart = cartRepository.save(cart);
         if (isBOGO) {
