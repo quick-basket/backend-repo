@@ -7,7 +7,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 
 # Uncomment the next line if you need to copy an .env file
-COPY .env.development .
+#COPY .env.development .
 
 # Build the application
 RUN mvn package -DskipTests
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Uncomment the next line if you need to copy an .env file
-COPY --from=build /app/.env.development ./.env.development
+#COPY --from=build /app/.env.development ./.env.development
 
 # Expose the port the app runs on
 EXPOSE 8080
