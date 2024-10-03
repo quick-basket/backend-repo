@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.order.controller;
 
+import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
@@ -45,10 +46,10 @@ public class OrderController {
         return Response.successResponse("success fetch all order", orders);
     }
 
-    @PostMapping("/create-pending")
-    public ResponseEntity<?> createPendingOrder(@RequestBody CheckoutDto checkoutData, @RequestParam String paymentType) {
+    @PostMapping()
+    public ResponseEntity<?> createOrder(@RequestBody CheckoutDto checkoutData, @RequestParam String paymentType) {
         try {
-            OrderWithMidtransResponseDto pendingOrder = orderService.createOrRetrievePendingOrder(checkoutData, paymentType);
+            OrderWithMidtransResponseDto pendingOrder = orderService.createOrder(checkoutData, paymentType);
             return Response.successResponse("Order created or retrieved", pendingOrder);
         } catch (MidtransError e) {
             return Response.failedResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "MIDTRANS ERROR", e.getMessage());
@@ -66,6 +67,13 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingOrders() {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+        return Response.successResponse("Get pending order", orderService.getPendingOrder(userId));
+    }
+
     @PutMapping("/status/{orderId}")
     public ResponseEntity<?> updateOrderStatus(@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest orderStatusUpdateRequest) {
         try {
@@ -74,6 +82,11 @@ public class OrderController {
         } catch (DataNotFoundException e) {
             return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);
         }
+    }
+
+    @GetMapping("/status/{orderCode}")
+    public ResponseEntity<?> getOrderStatus(@PathVariable String orderCode) throws MidtransError {
+        return Response.successResponse("Got order status", orderService.getOrderStatus(orderCode));
     }
 
     @PostMapping("/cancel/{orderId}")

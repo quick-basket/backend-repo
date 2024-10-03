@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 public interface OrderService {
     CheckoutDto createCheckoutSummaryFromCart();
@@ -19,13 +18,13 @@ public interface OrderService {
     Order cancelOrder(Long orderId);
     List<Order> getUserOrders();
     Order getOrder(Long orderId);
-//    SnapTokenResponse initiateSnapTransaction(Long orderId) throws MidtransError;
+    OrderWithMidtransResponseDto getPendingOrder(Long userId);
     Order createOrderFromCheckoutData(CheckoutDto checkoutData) throws MidtransError;
     List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
     @Transactional
-    OrderWithMidtransResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
+    OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
     OrderResponseDto updateOrderStatusAfterPayment(String orderId, String paymentStatus) throws MidtransError;
-    OrderResponseDto getOrderStatus(Long orderId) throws MidtransError;
+    OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError;
     BigDecimal getTotalAmountAllStore();
     BigDecimal getTotalAmountFromOrdersLastWeek();
     BigDecimal getTotalAmountFromOrdersLastMonth();

@@ -1,9 +1,12 @@
 package com.grocery.quickbasket.order.dto;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.grocery.quickbasket.order.entity.Order;
 
+import com.grocery.quickbasket.order.mapper.JSONObjectSerializer;
 import lombok.Data;
 import org.json.JSONObject;
 
@@ -16,7 +19,6 @@ private Long id;
     private BigDecimal totalAmount;
     private String OrderStatus;
     private String orderCode;
-    private JSONObject midtransResponse;
 
     public OrderResponseDto mapToDto(Order order) {
         OrderResponseDto dto = new OrderResponseDto();

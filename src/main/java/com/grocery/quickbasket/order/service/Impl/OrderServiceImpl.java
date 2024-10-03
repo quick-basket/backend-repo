@@ -5,18 +5,22 @@ import com.grocery.quickbasket.carts.dto.CartListResponseDto;
 import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
 import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
+import com.grocery.quickbasket.exceptions.PendingOrderExcerption;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.midtrans.repository.MidtransRedisRepository;
 import com.grocery.quickbasket.midtrans.service.MidtransService;
-import com.grocery.quickbasket.order.dto.CheckoutDto;
-import com.grocery.quickbasket.order.dto.OrderListResponseDto;
-import com.grocery.quickbasket.order.dto.OrderResponseDto;
-import com.grocery.quickbasket.order.dto.OrderWithMidtransResponseDto;
+import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
 import com.grocery.quickbasket.order.entity.OrderStatus;
+import com.grocery.quickbasket.order.mapper.MapperHelper;
 import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
+import com.grocery.quickbasket.payment.entity.Payment;
+import com.grocery.quickbasket.payment.entity.PaymentStatus;
+import com.grocery.quickbasket.payment.mapper.MapperHelperPayment;
+import com.grocery.quickbasket.payment.service.PaymentService;
 import com.grocery.quickbasket.products.repository.ProductRepository;
 import com.grocery.quickbasket.store.dto.StoreDto;
 import com.grocery.quickbasket.store.entity.Store;
@@ -52,6 +56,8 @@ public class OrderServiceImpl implements OrderService {
     private final StoreRepository storeRepository;
     private final MidtransService midtransService;
     private final OrderItemRepository orderItemRepository;
+    private final PaymentService paymentService;
+    private final MidtransRedisRepository midtransRedisRepository;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -60,7 +66,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, PaymentService paymentService, MidtransRedisRepository midtransRedisRepository) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -70,6 +76,8 @@ public class OrderServiceImpl implements OrderService {
         this.storeRepository = storeRepository;
         this.midtransService = midtransService;
         this.orderItemRepository = orderItemRepository;
+        this.paymentService = paymentService;
+        this.midtransRedisRepository = midtransRedisRepository;
     }
 
     @Override
@@ -157,7 +165,20 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Order getOrder(Long orderId) {
-        return orderRepository.findById(orderId).orElse(null);
+        return orderRepository.findById(orderId).orElseThrow(() -> new DataNotFoundException("Order not found"));
+    }
+
+    @Override
+    public OrderWithMidtransResponseDto getPendingOrder(Long userId) {
+        Order order = orderRepository.findByUserIdAndStatus(userId, OrderStatus.PENDING_PAYMENT)
+                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+
+        JSONObject midtransResponse = midtransRedisRepository.getMidtransResponse(order.getMidtransTransactionId());
+        OrderResponseDto dto = new OrderResponseDto().mapToDto(order);
+
+        Map<String,Object> midtransResponseMap = midtransResponse.toMap();
+
+        return new OrderWithMidtransResponseDto(dto, midtransResponseMap);
     }
 
     @Override
@@ -214,7 +235,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderWithMidtransResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError {
+    public OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError {
         User currentUser = userService.getCurrentUser();
         Store store = storeRepository.findById(checkoutData.getStoreId())
                 .orElseThrow(() -> new StoreNotFoundException("Store not found"));
@@ -222,30 +243,30 @@ public class OrderServiceImpl implements OrderService {
         Optional<Order> existingPendingOrder = orderRepository.findTopByUserIdAndStoreAndStatusOrderByCreatedAtDesc(
                 currentUser.getId(), store, OrderStatus.PENDING_PAYMENT
         );
-
-        Order order;
-        Map<String, Object> midtransResponseMap;
-
         if (existingPendingOrder.isPresent()) {
-            order = existingPendingOrder.get();
-            if (isOrderOlderThan24Hours(order)) {
-                cancelOrder(order.getId());
-                order = createOrderFromCheckoutData(checkoutData);
-            }
-        } else {
-            order = createOrderFromCheckoutData(checkoutData);
+            throw new PendingOrderExcerption();
         }
 
-        midtransResponseMap = midtransService.createOrRetrieveMidtransTransaction(order, checkoutData, paymentType);
+        Order order = createOrderFromCheckoutData(checkoutData);
+        Payment payment = paymentService.createPayment(order, paymentType);
 
-        // Update order status based on Midtrans response
-        String midtransStatus = (String) midtransResponseMap.get("transaction_status");
-        String fraudStatus = (String) midtransResponseMap.get("fraud_status");
-        updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
+        Map<String, Object> midtransResponseMap = null;
+        if (!paymentType.equalsIgnoreCase("manual")) {
+            midtransResponseMap = midtransService.createOrRetrieveMidtransTransaction(order, checkoutData, paymentType);
+
+            // Update order status based on Midtrans response
+            String midtransStatus = (String) midtransResponseMap.get("transaction_status");
+            String fraudStatus = (String) midtransResponseMap.get("fraud_status");
+            updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
+        } else {
+            // For manual payments, set the initial status
+            order.setStatus(OrderStatus.PENDING_PAYMENT);
+        }
 
         order = orderRepository.save(order);
         OrderResponseDto orderResponseDto = new OrderResponseDto().mapToDto(order);
-        return new OrderWithMidtransResponseDto(orderResponseDto, midtransResponseMap);
+
+        return new OrderWithMidtransResponseDto(orderResponseDto, midtransResponseMap != null ? midtransResponseMap : new HashMap<>());
     }
 
     @Override
@@ -277,29 +298,32 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order = orderRepository.save(order);
+
+        // update payment status
+        Payment payment = paymentService.getPayment(order.getMidtransTransactionId());
+        PaymentStatus newPaymentStatus = MapperHelperPayment.mapOrderStatusToPaymentStatus(order.getStatus());
+        paymentService.updatePaymentStatus(order.getMidtransTransactionId(), newPaymentStatus);
         return new OrderResponseDto().mapToDto(order);
     }
 
     @Override
-    public OrderResponseDto getOrderStatus(Long orderId) throws MidtransError {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+    public OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError {
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new DataNotFoundException("Order not found for code: " + orderCode));
 
-        // Fetch the latest status from Midtrans
-        JSONObject transactionStatus = midtransService.getTransactionStatus(order.getOrderCode());
-        String midtransStatus = transactionStatus.getString("transaction_status");
-        String fraudStatus = transactionStatus.optString("fraud_status");
+        JSONObject midtransResponseStatus = midtransService.getTransactionStatus(orderCode);
 
-        updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
-        order = orderRepository.save(order);
+        return new OrderWithMidtransResponseDto(
+                new OrderResponseDto().mapToDto(order),
+                MapperHelper.jsonObjectToMap(midtransResponseStatus)
+        );
 
-        return new OrderResponseDto().mapToDto(order);
     }
 
 
-    private boolean isOrderOlderThan24Hours(Order order) {
-        return order.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS));
-    }
+//    private boolean isOrderOlderThan24Hours(Order order) {
+//        return order.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS));
+//    }
 
     private void updateOrderStatusBasedOnMidtransStatus(Order order, String transactionStatus, String fraudStatus) {
         switch (transactionStatus) {
@@ -324,24 +348,29 @@ public class OrderServiceImpl implements OrderService {
                 break;
         }
     }
+
     @Override
     public BigDecimal getTotalAmountAllStore() {
         return orderItemRepository.sumTotalAmountFromAllOrders();
     }
+
     @Override
     public BigDecimal getTotalAmountFromOrdersLastWeek() {
         Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastWeek(oneWeekAgo);
     }
+
     @Override
     public BigDecimal getTotalAmountFromOrdersLastMonth() {
         Instant oneMonthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastMonth(oneMonthAgo);
     }
+
     @Override
     public BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId) {
         return orderItemRepository.getTotalAmountByStoreAndCategory(storeId, categoryId);
     }
+
     @Override
     public BigDecimal getTotalAmountByStoreId(Long storeId) {
         return orderItemRepository.getTotalAmountByStore(storeId);
