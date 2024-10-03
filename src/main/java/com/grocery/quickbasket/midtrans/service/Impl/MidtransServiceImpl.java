@@ -6,18 +6,21 @@ import com.grocery.quickbasket.order.dto.CheckoutDto;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.mapper.MapperHelper;
 import com.grocery.quickbasket.order.service.OrderService;
+import com.grocery.quickbasket.payment.entity.PaymentStatus;
+import com.grocery.quickbasket.payment.mapper.MapperHelperPayment;
+import com.grocery.quickbasket.payment.service.PaymentService;
 import com.grocery.quickbasket.user.service.UserService;
 import com.midtrans.Config;
 import com.midtrans.ConfigFactory;
 import com.midtrans.httpclient.error.MidtransError;
 import com.midtrans.service.MidtransCoreApi;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import javax.swing.*;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -32,13 +35,15 @@ public class MidtransServiceImpl implements MidtransService {
     private final UserService userService;
     private final OrderService orderService;
     private final MidtransRedisRepository midtransRedisRepository;
+    private final PaymentService paymentService;
 
     public MidtransServiceImpl(@Value("${midtrans.server.key}") String serverKey,
                                @Value("${midtrans.client.key}") String clientKey,
-                               @Value("${midtrans.is.production}") boolean isProduction, @Lazy UserService userService, @Lazy OrderService orderService, MidtransRedisRepository midtransRedisRepository) {
+                               @Value("${midtrans.is.production}") boolean isProduction, @Lazy UserService userService, @Lazy OrderService orderService, MidtransRedisRepository midtransRedisRepository, @Lazy PaymentService paymentService) {
         this.userService = userService;
         this.orderService = orderService;
         this.midtransRedisRepository = midtransRedisRepository;
+        this.paymentService = paymentService;
         Config config = Config.builder()
                 .setServerKey(serverKey)
                 .setClientKey(clientKey)
@@ -54,8 +59,8 @@ public class MidtransServiceImpl implements MidtransService {
     }
 
     @Override
-    public JSONObject getTransactionStatus(String orderId) throws MidtransError {
-        return coreApi.checkTransaction(orderId);
+    public JSONObject getTransactionStatus(String orderCode) throws MidtransError {
+        return coreApi.checkTransaction(orderCode);
     }
 
     @Override
@@ -109,8 +114,12 @@ public class MidtransServiceImpl implements MidtransService {
             }});
         }});
 
+        params.put("custom_expiry", new HashMap<String, Integer>() {{
+            put("expiry_duration", 30);
+        }});
+
         params.put("callbacks", new HashMap<String, String>() {{
-            put("finish", "http://localhost:3000/checkout");
+            put("finish", "http://localhost:3000/checkout/finish");
             put("unfinish", "http://localhost:3000/checkout");
             put("error", "http://localhost:3000/checkout");
         }});
@@ -190,22 +199,26 @@ public class MidtransServiceImpl implements MidtransService {
         log.info("Received Midtrans notification: {}", notificationPayload);
 
         String orderId = (String) notificationPayload.get("order_id");
+        String transactionId = (String) notificationPayload.get("transaction_id");
         String transactionStatus = (String) notificationPayload.get("transaction_status");
         String fraudStatus = (String) notificationPayload.get("fraud_status");
 
         // Update order status
         try {
             orderService.updateOrderStatusAfterPayment(orderId, transactionStatus);
+
+            // update status payment (complete)
+            PaymentStatus paymentStatus = MapperHelperPayment.mapMidtransStatusToPaymentStatus(transactionStatus);
+            paymentService.updatePaymentStatus(transactionId, paymentStatus);
+
         } catch (Exception e) {
             log.error("Error updating order status for order {}: {}", orderId, e.getMessage());
             throw new MidtransError("Failed to update order status: " + e.getMessage());
         }
 
         // Delete Redis entry
-        String transactionId = (String) notificationPayload.get("transaction_id");
         midtransRedisRepository.deleteMidtransResponse(transactionId);
 
         log.info("Successfully processed notification for order {}", orderId);
     }
-
 }
