@@ -1,9 +1,6 @@
 package com.grocery.quickbasket.order.service;
 
-import com.grocery.quickbasket.order.dto.CheckoutDto;
-import com.grocery.quickbasket.order.dto.OrderListResponseDto;
-import com.grocery.quickbasket.order.dto.OrderResponseDto;
-import com.grocery.quickbasket.order.dto.OrderWithMidtransResponseDto;
+import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderStatus;
 import com.midtrans.httpclient.error.MidtransError;
@@ -16,7 +13,7 @@ public interface OrderService {
     CheckoutDto createCheckoutSummaryFromCart();
     OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus);
     Order cancelOrder(Long orderId);
-    List<Order> getUserOrders();
+    OrderListDetailDto getUserOrders(int page, int size);
     Order getOrder(Long orderId);
     OrderWithMidtransResponseDto getPendingOrder(Long userId);
     Order createOrderFromCheckoutData(CheckoutDto checkoutData) throws MidtransError;

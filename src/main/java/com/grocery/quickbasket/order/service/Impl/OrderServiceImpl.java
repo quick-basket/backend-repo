@@ -14,6 +14,7 @@ import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
 import com.grocery.quickbasket.order.entity.OrderStatus;
 import com.grocery.quickbasket.order.mapper.MapperHelper;
+import com.grocery.quickbasket.order.mapper.OrderMapper;
 import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
@@ -35,6 +36,10 @@ import com.midtrans.httpclient.error.MidtransError;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +63,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentService paymentService;
     private final MidtransRedisRepository midtransRedisRepository;
+    private final OrderMapper orderMapper;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -66,7 +72,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, PaymentService paymentService, MidtransRedisRepository midtransRedisRepository) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, PaymentService paymentService, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -78,6 +84,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderItemRepository = orderItemRepository;
         this.paymentService = paymentService;
         this.midtransRedisRepository = midtransRedisRepository;
+        this.orderMapper = orderMapper;
     }
 
     @Override
@@ -113,6 +120,7 @@ public class OrderServiceImpl implements OrderService {
                 .map(cartItem -> {
                     CheckoutDto.Item item = new CheckoutDto.Item();
                     item.setProductId(cartItem.getProductId());
+                    item.setInventoryId(cartItem.getInventoryId());
                     item.setName(cartItem.getProductName());
                     item.setPrice(cartItem.getPrice());
                     item.setDiscountPrice(cartItem.getDiscountPrice());
@@ -159,8 +167,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<Order> getUserOrders() {
-        return List.of();
+    public OrderListDetailDto getUserOrders(int page, int size) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
+
+        return orderMapper.mapToOrderListResponseDto(orderPage);
     }
 
     @Override
@@ -174,9 +188,17 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
         JSONObject midtransResponse = midtransRedisRepository.getMidtransResponse(order.getMidtransTransactionId());
+        try {
+            if (midtransResponse == null) {
+                midtransResponse = midtransService.getTransactionStatus(order.getOrderCode());
+            }
+        } catch (MidtransError e) {
+            log.info("Error: {}", e.getMessage());
+        }
         OrderResponseDto dto = new OrderResponseDto().mapToDto(order);
 
-        Map<String,Object> midtransResponseMap = midtransResponse.toMap();
+        assert midtransResponse != null;
+        Map<String, Object> midtransResponseMap = midtransResponse.toMap();
 
         return new OrderWithMidtransResponseDto(dto, midtransResponseMap);
     }
@@ -248,7 +270,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = createOrderFromCheckoutData(checkoutData);
-        Payment payment = paymentService.createPayment(order, paymentType);
 
         Map<String, Object> midtransResponseMap = null;
         if (!paymentType.equalsIgnoreCase("manual")) {
@@ -262,6 +283,8 @@ public class OrderServiceImpl implements OrderService {
             // For manual payments, set the initial status
             order.setStatus(OrderStatus.PENDING_PAYMENT);
         }
+
+        Payment payment = paymentService.createPayment(order, paymentType);
 
         order = orderRepository.save(order);
         OrderResponseDto orderResponseDto = new OrderResponseDto().mapToDto(order);
@@ -283,6 +306,8 @@ public class OrderServiceImpl implements OrderService {
             case "capture":
             case "settlement":
                 order.setStatus(OrderStatus.PROCESSING);
+                //inventory stock kurang
+                // inventoryService.substractStock(orderId)
                 break;
             case "pending":
                 order.setStatus(OrderStatus.PENDING_PAYMENT);
