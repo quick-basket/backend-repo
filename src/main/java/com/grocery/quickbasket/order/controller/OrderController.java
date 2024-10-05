@@ -40,6 +40,14 @@ public class OrderController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<?> getUserOrders (
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return Response.successResponse("Get All Orders", orderService.getUserOrders(page, size));
+    }
+
     @GetMapping("/store/{storeId}")
     public ResponseEntity<?> getAllOrderByStoreAndUserId(@PathVariable Long storeId) {
         List<OrderListResponseDto> orders = orderService.getAllOrderByStoreIdAndUserId(storeId);

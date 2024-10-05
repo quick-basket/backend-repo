@@ -174,6 +174,7 @@ public class MidtransServiceImpl implements MidtransService {
 
                 //save to redis
                 midtransRedisRepository.saveMidtransResponse(midtransResponse);
+                log.info("Success save redis: {}", midtransResponse);
             } catch (Exception e) {
                 log.error("Error creating Midtrans transaction for order: {}. Error: {}", order.getOrderCode(), e.getMessage(), e);
                 throw new MidtransError("Failed to create Midtrans transaction: " + e.getMessage());
