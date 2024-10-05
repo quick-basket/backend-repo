@@ -4,6 +4,7 @@ import com.grocery.quickbasket.order.entity.OrderItem;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -50,4 +51,5 @@ BigDecimal getTotalAmountByStoreAndCategory(
         @Param("storeId") Long storeId
     );
 
+    List<OrderItem> findByOrderId(Long orderId);
 }

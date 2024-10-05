@@ -27,4 +27,14 @@ public class InventoryJournalServiceImpl implements InventoryJournalService{
             .collect(Collectors.toList());
     }
 
+    @Override
+    public int getTotalIn(Long inventoryId) {
+        return inventoryJournalRepository.getTotalPositiveQuantityChange(inventoryId);
+    }
+
+    @Override
+    public int getTotalOut(Long inventoryId) {
+        return inventoryJournalRepository.getTotalNegativeQuantityChange(inventoryId);
+    }
+
 }

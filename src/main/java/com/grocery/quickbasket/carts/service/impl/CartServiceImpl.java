@@ -95,6 +95,14 @@ public class CartServiceImpl implements CartService {
             .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void deleteAllCartByUserIdAndStoreId(Long storeId) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        cartRepository.deleteAllByUserIdAndInventoryStoreId(userId, storeId);
+    }
+
 
 
     @Override
