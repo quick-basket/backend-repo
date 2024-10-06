@@ -12,7 +12,8 @@ import java.util.List;
 public interface OrderService {
     CheckoutDto createCheckoutSummaryFromCart(Long storeId);
     OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus);
-    Order cancelOrder(Long orderId);
+    @Transactional
+    Order cancelOrder(String orderCode);
     OrderListDetailDto getUserOrders(int page, int size);
     Order getOrder(Long orderId);
     OrderWithMidtransResponseDto getPendingOrder(Long userId);

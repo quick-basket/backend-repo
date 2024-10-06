@@ -97,10 +97,10 @@ public class OrderController {
         return Response.successResponse("Got order status", orderService.getOrderStatus(orderCode));
     }
 
-    @PostMapping("/cancel/{orderId}")
-    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId) {
+    @PostMapping("/cancel/{orderCode}")
+    public ResponseEntity<?> cancelOrder(@PathVariable String orderCode) {
         try {
-            Order cancelledOrder = orderService.cancelOrder(orderId);
+            Order cancelledOrder = orderService.cancelOrder(orderCode);
             return Response.successResponse("Order cancelled", cancelledOrder);
         } catch (DataNotFoundException e) {
             return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);

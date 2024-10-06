@@ -48,8 +48,8 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public void updatePaymentStatus(String transactionId, PaymentStatus paymentStatus) {
-        Payment payment = paymentRepository.findByTransactionId(transactionId)
+    public void updatePaymentStatus(String identifier, PaymentStatus paymentStatus) {
+        Payment payment = paymentRepository.findByTransactionIdOrOrder_OrderCode(identifier, identifier)
                 .orElseThrow(() -> new DataNotFoundException("Payment not found"));
 
         payment.setPaymentStatus(paymentStatus);
@@ -58,7 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Payment getPayment(String transactionId) {
-        return paymentRepository.findByTransactionId(transactionId)
+        return paymentRepository.findByTransactionIdOrOrder_OrderCode(transactionId, transactionId)
                 .orElseThrow(() -> new DataNotFoundException("Payment not found"));
     }
 

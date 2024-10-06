@@ -153,17 +153,24 @@ public class OrderServiceImpl implements OrderService {
         return new OrderResponseDto().mapToDto(order);
     }
 
+    @Transactional
     @Override
-    public Order cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+    public Order cancelOrder(String orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
-        if (order.getStatus().canBeCancelled()) {
-            order.setStatus(OrderStatus.CANCELED);
-            return orderRepository.save(order);
-        } else {
+        if (!order.getStatus().canBeCancelled()) {
             throw new IllegalStateException("Order cannot be cancelled in its current state");
         }
+
+        order.setStatus(OrderStatus.CANCELED);
+
+        // Update associated payment
+        paymentService.updatePaymentStatus(orderCode,PaymentStatus.FAILED);
+
+        // TODO: Handle inventory updates (return items to stock)
+
+        return orderRepository.save(order);
     }
 
     @Override
@@ -173,6 +180,7 @@ public class OrderServiceImpl implements OrderService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
+        log.info("order that get shown: {}", orderPage);
 
         return orderMapper.mapToOrderListResponseDto(orderPage);
     }

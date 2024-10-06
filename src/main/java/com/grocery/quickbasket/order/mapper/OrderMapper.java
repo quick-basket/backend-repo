@@ -31,7 +31,7 @@ public class OrderMapper {
     }
 
     private OrderListDetailDto.OrderDetailDto mapToOrderDetailDto(Order order) {
-        Payment payment = paymentService.getPayment(order.getMidtransTransactionId());
+        Payment payment = paymentService.getPayment(order.getOrderCode());
         return OrderListDetailDto.OrderDetailDto.builder()
                 .id(order.getId())
                 .orderCode(order.getOrderCode())
