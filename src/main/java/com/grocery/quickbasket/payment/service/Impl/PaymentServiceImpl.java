@@ -4,6 +4,7 @@ import com.grocery.quickbasket.cloudinary.service.CloudinaryService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderStatus;
+import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
 import com.grocery.quickbasket.payment.entity.Payment;
 import com.grocery.quickbasket.payment.entity.PaymentStatus;
@@ -20,11 +21,13 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderService orderService;
     private final CloudinaryService cloudinaryService;
+    private final OrderRepository orderRepository;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, @Lazy OrderService orderService, CloudinaryService cloudinaryService) {
+    public PaymentServiceImpl(PaymentRepository paymentRepository, @Lazy OrderService orderService, CloudinaryService cloudinaryService, OrderRepository orderRepository) {
         this.paymentRepository = paymentRepository;
         this.orderService = orderService;
         this.cloudinaryService = cloudinaryService;
+        this.orderRepository = orderRepository;
     }
 
     @Override
@@ -33,7 +36,13 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setOrder(order);
         payment.setPaymentMethod(paymentMethod);
         payment.setAmount(order.getTotalAmount());
-        payment.setTransactionId(order.getMidtransTransactionId());
+
+        if (order.getMidtransTransactionId() == null) {
+            payment.setTransactionId(order.getOrderCode());
+        } else {
+            payment.setTransactionId(order.getMidtransTransactionId());
+        }
+
         payment.setPaymentStatus(PaymentStatus.PENDING);
         return paymentRepository.save(payment);
     }
@@ -67,13 +76,18 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public Payment uploadPaymentProof(String transactionId, MultipartFile file) {
-        Payment payment = getPayment(transactionId);
+    public Payment uploadPaymentProof(String orderCode, MultipartFile file) {
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+
+        Payment payment = paymentRepository.findByOrderId(order.getId())
+                .orElseThrow(() -> new DataNotFoundException("Payment not found"));
 
         try {
             String imageUrl = cloudinaryService.uploadProfileUserImage(file);
             payment.setPaymentProofUrl(imageUrl);
             payment.setPaymentStatus(PaymentStatus.PAYMENT_CONFIRMATION);
+            order.setStatus(OrderStatus.PAYMENT_CONFIRMATION);
             return paymentRepository.save(payment);
         } catch (RuntimeException e) {
             throw new RuntimeException("Failed to upload payment proof", e);

@@ -25,9 +25,9 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/checkout")
-    public ResponseEntity<?> getCheckoutOrderSummary () {
-        return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart());
+    @GetMapping("/checkout/{storeId}")
+    public ResponseEntity<?> getCheckoutOrderSummary (@PathVariable Long storeId) {
+        return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart(storeId));
     }
 
     @GetMapping("/{id}")
