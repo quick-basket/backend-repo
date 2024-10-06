@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface OrderService {
-    CheckoutDto createCheckoutSummaryFromCart();
+    CheckoutDto createCheckoutSummaryFromCart(Long storeId);
     OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus);
     Order cancelOrder(Long orderId);
     OrderListDetailDto getUserOrders(int page, int size);

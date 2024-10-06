@@ -88,7 +88,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public CheckoutDto createCheckoutSummaryFromCart() {
+    public CheckoutDto createCheckoutSummaryFromCart(Long storeId) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
 
@@ -96,9 +96,9 @@ public class OrderServiceImpl implements OrderService {
 
         checkoutDto.setUserId(userId);
 
-        Store store = storeRepository.findById(1L)
+        Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new StoreNotFoundException("Store not found"));
-        checkoutDto.setStoreId(1L);
+        checkoutDto.setStoreId(storeId);
         checkoutDto.setStoreName(store.getName());
 
         //add recipient
@@ -115,7 +115,7 @@ public class OrderServiceImpl implements OrderService {
         checkoutDto.setRecipient(recipient);
 
         //add items
-        List<CartListResponseDto> itemListFromCart = cartService.getAllCartByUserIdWithStoreId(1L);
+        List<CartListResponseDto> itemListFromCart = cartService.getAllCartByUserIdWithStoreId(storeId);
         List<CheckoutDto.Item> itemList = itemListFromCart.stream()
                 .map(cartItem -> {
                     CheckoutDto.Item item = new CheckoutDto.Item();
@@ -132,7 +132,7 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
         checkoutDto.setItems(itemList);
 
-        CartSummaryResponseDto cartSummary = cartService.getCartSummary(checkoutDto.getStoreId());
+        CartSummaryResponseDto cartSummary = cartService.getCartSummary(storeId);
         CheckoutDto.Summary summary = new CheckoutDto.Summary();
         summary.setSubtotal(cartSummary.getTotalPrice());
         summary.setDiscount(cartSummary.getTotalDiscount());
@@ -187,15 +187,13 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByUserIdAndStatus(userId, OrderStatus.PENDING_PAYMENT)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
-        JSONObject midtransResponse = midtransRedisRepository.getMidtransResponse(order.getMidtransTransactionId());
-        try {
-            if (midtransResponse == null) {
-                midtransResponse = midtransService.getTransactionStatus(order.getOrderCode());
-            }
-        } catch (MidtransError e) {
-            log.info("Error: {}", e.getMessage());
-        }
         OrderResponseDto dto = new OrderResponseDto().mapToDto(order);
+
+        if (order.getMidtransTransactionId() == null) {
+            return new OrderWithMidtransResponseDto(dto, null);
+        }
+
+        JSONObject midtransResponse = midtransRedisRepository.getMidtransResponse(order.getMidtransTransactionId());
 
         assert midtransResponse != null;
         Map<String, Object> midtransResponseMap = midtransResponse.toMap();
@@ -335,6 +333,13 @@ public class OrderServiceImpl implements OrderService {
     public OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order not found for code: " + orderCode));
+
+        if (order.getMidtransTransactionId() == null) {
+            return new OrderWithMidtransResponseDto(
+                    new OrderResponseDto().mapToDto(order),
+                    null
+            );
+        }
 
         JSONObject midtransResponseStatus = midtransService.getTransactionStatus(orderCode);
 
