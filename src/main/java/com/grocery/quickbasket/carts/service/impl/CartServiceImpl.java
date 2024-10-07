@@ -160,7 +160,9 @@ public class CartServiceImpl implements CartService {
                     break;
             }
         }
-        
+
+        cart.setDiscountPrice(discountPrice.setScale(2, RoundingMode.HALF_DOWN));
+
         Cart savedCart = cartRepository.save(cart);
         if (isBOGO) {
             Integer currentBonusItem = inventory.getBonusItem() != null ? inventory.getBonusItem() : 0;

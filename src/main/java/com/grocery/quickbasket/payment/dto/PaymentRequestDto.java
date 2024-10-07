@@ -1,4 +1,4 @@
-package com.grocery.quickbasket.payments.dto;
+package com.grocery.quickbasket.payment.dto;
 
 import lombok.Data;
 
