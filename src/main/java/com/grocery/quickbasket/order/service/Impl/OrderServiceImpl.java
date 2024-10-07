@@ -6,18 +6,23 @@ import com.grocery.quickbasket.carts.dto.CartListSummaryResponseDto;
 import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
 import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
+import com.grocery.quickbasket.exceptions.PendingOrderExcerption;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.midtrans.repository.MidtransRedisRepository;
 import com.grocery.quickbasket.midtrans.service.MidtransService;
-import com.grocery.quickbasket.order.dto.CheckoutDto;
-import com.grocery.quickbasket.order.dto.OrderListResponseDto;
-import com.grocery.quickbasket.order.dto.OrderResponseDto;
-import com.grocery.quickbasket.order.dto.OrderWithMidtransResponseDto;
+import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
 import com.grocery.quickbasket.order.entity.OrderItem;
 import com.grocery.quickbasket.order.entity.OrderStatus;
+import com.grocery.quickbasket.order.mapper.MapperHelper;
+import com.grocery.quickbasket.order.mapper.OrderMapper;
 import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import com.grocery.quickbasket.order.repository.OrderRepository;
 import com.grocery.quickbasket.order.service.OrderService;
+import com.grocery.quickbasket.payment.entity.Payment;
+import com.grocery.quickbasket.payment.entity.PaymentStatus;
+import com.grocery.quickbasket.payment.mapper.MapperHelperPayment;
+import com.grocery.quickbasket.payment.service.PaymentService;
 import com.grocery.quickbasket.products.repository.ProductRepository;
 import com.grocery.quickbasket.store.dto.StoreDto;
 import com.grocery.quickbasket.store.entity.Store;
@@ -36,6 +41,10 @@ import com.midtrans.httpclient.error.MidtransError;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +67,9 @@ public class OrderServiceImpl implements OrderService {
     private final StoreRepository storeRepository;
     private final MidtransService midtransService;
     private final OrderItemRepository orderItemRepository;
+    private final PaymentService paymentService;
+    private final MidtransRedisRepository midtransRedisRepository;
+    private final OrderMapper orderMapper;
     private final UserVoucherRepository userVoucherRepository;
 
     // Inject Midtrans configuration
@@ -67,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper, PaymentService paymentService) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -77,79 +89,83 @@ public class OrderServiceImpl implements OrderService {
         this.storeRepository = storeRepository;
         this.midtransService = midtransService;
         this.orderItemRepository = orderItemRepository;
+        this.paymentService = paymentService;
+        this.midtransRedisRepository = midtransRedisRepository;
+        this.orderMapper = orderMapper;
         this.userVoucherRepository = userVoucherRepository;
     }
 
     @Override
-public CheckoutDto createCheckoutSummaryFromCart(Long userVoucherId) {
-    var claims = Claims.getClaimsFromJwt();
-    Long userId = (Long) claims.get("userId");
+    public CheckoutDto createCheckoutSummaryFromCart(Long storeId, Long userVoucherId) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
 
-    CheckoutDto checkoutDto = new CheckoutDto();
+        CheckoutDto checkoutDto = new CheckoutDto();
 
-    checkoutDto.setUserId(userId);
+        checkoutDto.setUserId(userId);
 
-    Store store = storeRepository.findById(1L)
-            .orElseThrow(() -> new StoreNotFoundException("Store not found"));
-    checkoutDto.setStoreId(1L);
-    checkoutDto.setStoreName(store.getName());
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new StoreNotFoundException("Store not found"));
+        checkoutDto.setStoreId(storeId);
+        checkoutDto.setStoreName(store.getName());
 
-    // Add recipient
-    User user = userService.findById(userId);
-    CheckoutDto.Recipient recipient = new CheckoutDto.Recipient();
-    recipient.setName(user.getName());
-    recipient.setPhone(user.getPhone());
+        //add recipient
+        User user = userService.findById(userId);
+        CheckoutDto.Recipient recipient = new CheckoutDto.Recipient();
+        recipient.setName(user.getName());
+        recipient.setPhone(user.getPhone());
 
-    UserAddress userAddress = UserAddressDto.toEntity(addressService.getPrimaryAddress());
-    recipient.setAddressId(userAddress.getId());
-    recipient.setCity(userAddress.getCity());
-    recipient.setFullAddress(userAddress.getAddress());
-    recipient.setPostalCode(userAddress.getPostalCode());
-    checkoutDto.setRecipient(recipient);
+        UserAddress userAddress = UserAddressDto.toEntity(addressService.getPrimaryAddress());
+        recipient.setAddressId(userAddress.getId());
+        recipient.setCity(userAddress.getCity());
+        recipient.setFullAddress(userAddress.getAddress());
+        recipient.setPostalCode(userAddress.getPostalCode());
+        checkoutDto.setRecipient(recipient);
 
-    // Add items
-    List<CartListResponseDto> itemListFromCart = cartService.getAllCartByUserIdWithStoreId(1L);
-    List<CheckoutDto.Item> itemList = itemListFromCart.stream()
-            .map(cartItem -> {
-                CheckoutDto.Item item = new CheckoutDto.Item();
-                item.setProductId(cartItem.getProductId());
-                item.setName(cartItem.getProductName());
-                item.setPrice(cartItem.getPrice());
-                item.setDiscountPrice(cartItem.getDiscountPrice());
-                item.setQuantity(cartItem.getQuantity());
-                item.setSubtotal(cartItem.getPrice().subtract(cartItem.getDiscountPrice()));
-                item.setImage(cartItem.getImageUrls().isEmpty() ? "/api/placeholder/50/50" : cartItem.getImageUrls().getFirst());
-                return item;
-            })
-            .toList();
-    checkoutDto.setItems(itemList);
+        //add items
+        List<CartListResponseDto> itemListFromCart = cartService.getAllCartByUserIdWithStoreId(storeId);
+        List<CheckoutDto.Item> itemList = itemListFromCart.stream()
+                .map(cartItem -> {
+                    CheckoutDto.Item item = new CheckoutDto.Item();
+                    item.setProductId(cartItem.getProductId());
+                    item.setInventoryId(cartItem.getInventoryId());
+                    item.setName(cartItem.getProductName());
+                    item.setPrice(cartItem.getPrice());
+                    item.setDiscountPrice(cartItem.getDiscountPrice());
+                    item.setQuantity(cartItem.getQuantity());
+                    item.setSubtotal(cartItem.getPrice().subtract(cartItem.getDiscountPrice()));
+                    item.setImage(cartItem.getImageUrls().isEmpty() ? "/api/placeholder/50/50" : cartItem.getImageUrls().getFirst());
+                    return item;
+                })
+                .toList();
+        checkoutDto.setItems(itemList);
 
-    CartSummaryResponseDto cartSummary = cartService.getCartSummary(checkoutDto.getStoreId());
-    CheckoutDto.Summary summary = new CheckoutDto.Summary();
-    summary.setSubtotal(cartSummary.getTotalPrice());
-    summary.setDiscount(cartSummary.getTotalDiscount());
-    
-    BigDecimal totalBeforeVoucher = cartSummary.getTotalDiscountPrice();
-    log.info("=========total voucher" + totalBeforeVoucher.toString());
-    summary.setShippingCost(BigDecimal.valueOf(5000));
-    
-    // Apply voucher if provided
-    BigDecimal voucherDiscount = BigDecimal.ZERO;
-    if (userVoucherId != null) {
-        List<CartListSummaryResponseDto> cartListSummary = convertToCartListSummary(itemListFromCart);
-        voucherDiscount = applyVoucher(userId, totalBeforeVoucher, cartListSummary, userVoucherId);
-    }
-    
-    BigDecimal finalTotal = totalBeforeVoucher.subtract(voucherDiscount);
-    summary.setDiscount(cartSummary.getTotalDiscount());
-    summary.setVoucher(voucherDiscount);
-    summary.setTotal(finalTotal);
-    log.info("=========total finalll" + finalTotal.toString());
-    log.info("=========voucher discount" + voucherDiscount.toString());
-    
-    checkoutDto.setSummary(summary);
+        CartSummaryResponseDto cartSummary = cartService.getCartSummary(storeId);
+        CheckoutDto.Summary summary = new CheckoutDto.Summary();
+        summary.setSubtotal(cartSummary.getTotalPrice());
+        summary.setDiscount(cartSummary.getTotalDiscount());
 
-    return checkoutDto;
+        BigDecimal totalBeforeVoucher = cartSummary.getTotalDiscountPrice();
+        log.info("=========total voucher{}", totalBeforeVoucher.toString());
+        summary.setShippingCost(BigDecimal.valueOf(5000));
+
+        // Apply voucher if provided
+        BigDecimal voucherDiscount = BigDecimal.ZERO;
+        if (userVoucherId != null) {
+            List<CartListSummaryResponseDto> cartListSummary = convertToCartListSummary(itemListFromCart);
+            voucherDiscount = applyVoucher(userId, totalBeforeVoucher, cartListSummary, userVoucherId);
+        }
+
+        BigDecimal finalTotal = totalBeforeVoucher.subtract(voucherDiscount);
+        summary.setDiscount(cartSummary.getTotalDiscount());
+        summary.setVoucher(voucherDiscount);
+        summary.setTotal(finalTotal);
+        log.info("=========total finalll{}", finalTotal.toString());
+        log.info("=========voucher discount{}", voucherDiscount.toString());
+
+        checkoutDto.setSummary(summary);
+
+        return checkoutDto;
 }
 
 private List<CartListSummaryResponseDto> convertToCartListSummary(List<CartListResponseDto> itemListFromCart) {
@@ -173,7 +189,7 @@ public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartList
         Voucher voucher = userVoucher.getVoucher();
 
         Instant now = Instant.now();
-        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate()) 
+        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
             || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
             throw new IllegalArgumentException("Voucher tidak memenuhi syarat");
         }
@@ -245,27 +261,60 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
         return new OrderResponseDto().mapToDto(order);
     }
 
+    @Transactional
     @Override
-    public Order cancelOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+    public Order cancelOrder(String orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
-        if (order.getStatus().canBeCancelled()) {
-            order.setStatus(OrderStatus.CANCELED);
-            return orderRepository.save(order);
-        } else {
+        if (!order.getStatus().canBeCancelled()) {
             throw new IllegalStateException("Order cannot be cancelled in its current state");
         }
+
+        order.setStatus(OrderStatus.CANCELED);
+
+        // Update associated payment
+        paymentService.updatePaymentStatus(orderCode,PaymentStatus.FAILED);
+
+        // TODO: Handle inventory updates (return items to stock)
+
+        return orderRepository.save(order);
     }
 
     @Override
-    public List<Order> getUserOrders() {
-        return List.of();
+    public OrderListDetailDto getUserOrders(int page, int size) {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<Order> orderPage = orderRepository.findByUserId(userId, pageable);
+        log.info("order that get shown: {}", orderPage);
+
+        return orderMapper.mapToOrderListResponseDto(orderPage);
     }
 
     @Override
     public Order getOrder(Long orderId) {
-        return orderRepository.findById(orderId).orElse(null);
+        return orderRepository.findById(orderId).orElseThrow(() -> new DataNotFoundException("Order not found"));
+    }
+
+    @Override
+    public OrderWithMidtransResponseDto getPendingOrder(Long userId) {
+        Order order = orderRepository.findByUserIdAndStatus(userId, OrderStatus.PENDING_PAYMENT)
+                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+
+        OrderResponseDto dto = new OrderResponseDto().mapToDto(order);
+
+        if (order.getMidtransTransactionId() == null) {
+            return new OrderWithMidtransResponseDto(dto, null);
+        }
+
+        JSONObject midtransResponse = midtransRedisRepository.getMidtransResponse(order.getMidtransTransactionId());
+
+        assert midtransResponse != null;
+        Map<String, Object> midtransResponseMap = midtransResponse.toMap();
+
+        return new OrderWithMidtransResponseDto(dto, midtransResponseMap);
     }
 
     @Override
@@ -322,7 +371,7 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
 
     @Override
     @Transactional
-    public OrderWithMidtransResponseDto createOrRetrievePendingOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError {
+    public OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError {
         User currentUser = userService.getCurrentUser();
         Store store = storeRepository.findById(checkoutData.getStoreId())
                 .orElseThrow(() -> new StoreNotFoundException("Store not found"));
@@ -330,30 +379,31 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
         Optional<Order> existingPendingOrder = orderRepository.findTopByUserIdAndStoreAndStatusOrderByCreatedAtDesc(
                 currentUser.getId(), store, OrderStatus.PENDING_PAYMENT
         );
-
-        Order order;
-        Map<String, Object> midtransResponseMap;
-
         if (existingPendingOrder.isPresent()) {
-            order = existingPendingOrder.get();
-            if (isOrderOlderThan24Hours(order)) {
-                cancelOrder(order.getId());
-                order = createOrderFromCheckoutData(checkoutData);
-            }
-        } else {
-            order = createOrderFromCheckoutData(checkoutData);
+            throw new PendingOrderExcerption();
         }
 
-        midtransResponseMap = midtransService.createOrRetrieveMidtransTransaction(order, checkoutData, paymentType);
+        Order order = createOrderFromCheckoutData(checkoutData);
 
-        // Update order status based on Midtrans response
-        String midtransStatus = (String) midtransResponseMap.get("transaction_status");
-        String fraudStatus = (String) midtransResponseMap.get("fraud_status");
-        updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
+        Map<String, Object> midtransResponseMap = null;
+        if (!paymentType.equalsIgnoreCase("manual")) {
+            midtransResponseMap = midtransService.createOrRetrieveMidtransTransaction(order, checkoutData, paymentType);
+
+            // Update order status based on Midtrans response
+            String midtransStatus = (String) midtransResponseMap.get("transaction_status");
+            String fraudStatus = (String) midtransResponseMap.get("fraud_status");
+            updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
+        } else {
+            // For manual payments, set the initial status
+            order.setStatus(OrderStatus.PENDING_PAYMENT);
+        }
+
+        Payment payment = paymentService.createPayment(order, paymentType);
 
         order = orderRepository.save(order);
         OrderResponseDto orderResponseDto = new OrderResponseDto().mapToDto(order);
-        return new OrderWithMidtransResponseDto(orderResponseDto, midtransResponseMap);
+
+        return new OrderWithMidtransResponseDto(orderResponseDto, midtransResponseMap != null ? midtransResponseMap : new HashMap<>());
     }
 
     @Override
@@ -385,29 +435,39 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
         }
 
         order = orderRepository.save(order);
+
+        // update payment status
+        Payment payment = paymentService.getPayment(order.getMidtransTransactionId());
+        PaymentStatus newPaymentStatus = MapperHelperPayment.mapOrderStatusToPaymentStatus(order.getStatus());
+        paymentService.updatePaymentStatus(order.getMidtransTransactionId(), newPaymentStatus);
         return new OrderResponseDto().mapToDto(order);
     }
 
     @Override
-    public OrderResponseDto getOrderStatus(Long orderId) throws MidtransError {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+    public OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError {
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new DataNotFoundException("Order not found for code: " + orderCode));
 
-        // Fetch the latest status from Midtrans
-        JSONObject transactionStatus = midtransService.getTransactionStatus(order.getOrderCode());
-        String midtransStatus = transactionStatus.getString("transaction_status");
-        String fraudStatus = transactionStatus.optString("fraud_status");
+        if (order.getMidtransTransactionId() == null) {
+            return new OrderWithMidtransResponseDto(
+                    new OrderResponseDto().mapToDto(order),
+                    null
+            );
+        }
 
-        updateOrderStatusBasedOnMidtransStatus(order, midtransStatus, fraudStatus);
-        order = orderRepository.save(order);
+        JSONObject midtransResponseStatus = midtransService.getTransactionStatus(orderCode);
 
-        return new OrderResponseDto().mapToDto(order);
+        return new OrderWithMidtransResponseDto(
+                new OrderResponseDto().mapToDto(order),
+                MapperHelper.jsonObjectToMap(midtransResponseStatus)
+        );
+
     }
 
 
-    private boolean isOrderOlderThan24Hours(Order order) {
-        return order.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS));
-    }
+//    private boolean isOrderOlderThan24Hours(Order order) {
+//        return order.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS));
+//    }
 
     private void updateOrderStatusBasedOnMidtransStatus(Order order, String transactionStatus, String fraudStatus) {
         switch (transactionStatus) {

@@ -9,6 +9,6 @@ public enum OrderStatus {
     CANCELED;
 
     public boolean canBeCancelled() {
-        return this == PENDING_PAYMENT || this == PAYMENT_CONFIRMATION || this == PROCESSING;
+        return this == PENDING_PAYMENT || this == PAYMENT_CONFIRMATION;
     }
 }

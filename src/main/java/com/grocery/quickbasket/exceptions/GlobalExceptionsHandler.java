@@ -25,6 +25,11 @@ public class GlobalExceptionsHandler {
         return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
     }
 
+    @ExceptionHandler(PendingOrderExcerption.class)
+    public final ResponseEntity<Response<String>> handlePendingOrderExcerption(PendingOrderExcerption ex){
+        return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);
+    }
+
     @ExceptionHandler(StoreNameSameException.class)
     public final ResponseEntity<Response<String>> handleStoreNameSameException(StoreNameSameException ex){
         return Response.failedResponse(HttpStatus.CONFLICT.value(), ex.getMessage(), null);

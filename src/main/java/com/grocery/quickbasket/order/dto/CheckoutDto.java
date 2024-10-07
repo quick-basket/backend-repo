@@ -33,6 +33,7 @@ public class CheckoutDto {
     @Data
     public static class Item {
         private Long productId;
+        private Long inventoryId;
         private String name;
         private String image;
         private BigDecimal price;
