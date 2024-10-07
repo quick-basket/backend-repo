@@ -44,6 +44,13 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
+
+    public PaymentServiceImpl (PaymentRepository paymentRepository, OrderRepository orderRepository) {
+        this.paymentRepository = paymentRepository;
+        this.orderRepository = orderRepository;
+    }
+
+    @Override
     public PaymentListResponseDto updatePayment(Long id, PaymentRequestDto requestDto) {
 
         Payment payment = paymentRepository.findById(id)
@@ -107,7 +114,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public List<PaymentListResponseDto> getAllPayment() {
 
-        List<Payment> payments = paymentRepository.findAll();
+    @Override
+    public List<PaymentListResponseDto> getAllPaymentListByStoreId(Long storeid) {
+        List<Payment> payments = paymentRepository.findByOrderStoreId(storeid);
 
         return payments.stream()
             .map(PaymentListResponseDto::mapToDto)

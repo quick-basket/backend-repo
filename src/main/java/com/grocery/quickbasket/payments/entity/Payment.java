@@ -3,9 +3,7 @@ package com.grocery.quickbasket.payments.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-
 import org.hibernate.annotations.ColumnDefault;
-
 import com.grocery.quickbasket.order.entity.Order;
 
 import jakarta.persistence.Column;
