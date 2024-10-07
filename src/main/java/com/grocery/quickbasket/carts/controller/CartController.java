@@ -56,4 +56,10 @@ public class CartController {
     public ResponseEntity<?> getCartWithStoreId(@PathVariable Long storeId) {
         return Response.successResponse("fetched all carts", cartService.getAllCartByUserIdWithStoreId(storeId));
     }
+
+    @DeleteMapping("/carts/{storeId}")
+    public ResponseEntity<?> deleteAllCart (@PathVariable Long storeId) {
+        cartService.deleteAllCartByUserIdAndStoreId(storeId);
+        return ResponseEntity.ok().build();
+    }
 }

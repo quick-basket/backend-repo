@@ -44,10 +44,6 @@ public class VoucherController {
 
     @GetMapping
     public ResponseEntity<?>getAllVouchers() {
-        return Response.successResponse("get all vouchers", voucherService.getAllVouchers());
-    }
-    @GetMapping("/user")
-    public ResponseEntity<?>geVoucherByUserId() {
         return Response.successResponse("get all vouchers", voucherService.getAllVouchersByUserId());
     }
 

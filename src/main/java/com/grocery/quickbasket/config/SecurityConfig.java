@@ -100,7 +100,6 @@ public class SecurityConfig {
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
                                     "/api/v1/inventory-journals/**",
-                                    "/api/v1/vouchers/**",
                                     "/api/v1/location/**",
                                     "/api/v1/midtrans/**").permitAll()
                             .requestMatchers("/api/v1/stores", "/api/v1/stores/**").hasAuthority("SCOPE_super_admin")

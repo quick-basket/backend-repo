@@ -46,6 +46,7 @@ public class CheckoutDto {
     public static class Summary {
         private BigDecimal subtotal;
         private BigDecimal discount;
+        private BigDecimal voucher;
         private BigDecimal shippingCost;
         private BigDecimal total;
     }

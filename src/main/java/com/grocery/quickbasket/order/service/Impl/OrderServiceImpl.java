@@ -2,6 +2,7 @@ package com.grocery.quickbasket.order.service.Impl;
 
 import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.carts.dto.CartListResponseDto;
+import com.grocery.quickbasket.carts.dto.CartListSummaryResponseDto;
 import com.grocery.quickbasket.carts.dto.CartSummaryResponseDto;
 import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
@@ -32,6 +33,10 @@ import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.entity.UserAddress;
 import com.grocery.quickbasket.user.service.UserAddressService;
 import com.grocery.quickbasket.user.service.UserService;
+import com.grocery.quickbasket.vouchers.entity.DiscountTypes;
+import com.grocery.quickbasket.vouchers.entity.UserVoucher;
+import com.grocery.quickbasket.vouchers.entity.Voucher;
+import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 import com.midtrans.httpclient.error.MidtransError;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
@@ -44,6 +49,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -64,6 +70,7 @@ public class OrderServiceImpl implements OrderService {
     private final PaymentService paymentService;
     private final MidtransRedisRepository midtransRedisRepository;
     private final OrderMapper orderMapper;
+    private final UserVoucherRepository userVoucherRepository;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -72,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, PaymentService paymentService, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -85,10 +92,11 @@ public class OrderServiceImpl implements OrderService {
         this.paymentService = paymentService;
         this.midtransRedisRepository = midtransRedisRepository;
         this.orderMapper = orderMapper;
+        this.userVoucherRepository = userVoucherRepository;
     }
 
     @Override
-    public CheckoutDto createCheckoutSummaryFromCart(Long storeId) {
+    public CheckoutDto createCheckoutSummaryFromCart(Long storeId, Long userVoucherId) {
         var claims = Claims.getClaimsFromJwt();
         Long userId = (Long) claims.get("userId");
 
@@ -136,13 +144,113 @@ public class OrderServiceImpl implements OrderService {
         CheckoutDto.Summary summary = new CheckoutDto.Summary();
         summary.setSubtotal(cartSummary.getTotalPrice());
         summary.setDiscount(cartSummary.getTotalDiscount());
-        summary.setTotal(cartSummary.getTotalDiscountPrice());
+
+        BigDecimal totalBeforeVoucher = cartSummary.getTotalDiscountPrice();
+        log.info("=========total voucher{}", totalBeforeVoucher.toString());
         summary.setShippingCost(BigDecimal.valueOf(5000));
+
+        // Apply voucher if provided
+        BigDecimal voucherDiscount = BigDecimal.ZERO;
+        if (userVoucherId != null) {
+            List<CartListSummaryResponseDto> cartListSummary = convertToCartListSummary(itemListFromCart);
+            voucherDiscount = applyVoucher(userId, totalBeforeVoucher, cartListSummary, userVoucherId);
+        }
+
+        BigDecimal finalTotal = totalBeforeVoucher.subtract(voucherDiscount);
+        summary.setDiscount(cartSummary.getTotalDiscount());
+        summary.setVoucher(voucherDiscount);
+        summary.setTotal(finalTotal);
+        log.info("=========total finalll{}", finalTotal.toString());
+        log.info("=========voucher discount{}", voucherDiscount.toString());
+
         checkoutDto.setSummary(summary);
 
         return checkoutDto;
+}
 
+private List<CartListSummaryResponseDto> convertToCartListSummary(List<CartListResponseDto> itemListFromCart) {
+    return itemListFromCart.stream()
+        .map(item -> {
+            CartListSummaryResponseDto summary = new CartListSummaryResponseDto();
+            summary.setProductId(item.getProductId());
+            summary.setPrice(item.getPrice());
+            summary.setQuantity(item.getQuantity());
+            // Set other fields as needed
+            return summary;
+        })
+        .collect(Collectors.toList());
+}
+
+public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList, Long userVoucherId) {
+    try {
+        UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
+            .orElseThrow(() -> new DataNotFoundException("Voucher tidak ditemukan atau sudah digunakan"));
+
+        Voucher voucher = userVoucher.getVoucher();
+
+        Instant now = Instant.now();
+        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
+            || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
+            throw new IllegalArgumentException("Voucher tidak memenuhi syarat");
+        }
+
+        BigDecimal voucherDiscount = calculateVoucherDiscount(voucher, totalPrice, cartList);
+        // userVoucher.setIsUsed(true);
+        userVoucher.setUsedAt(now);
+        userVoucherRepository.save(userVoucher);
+
+        return voucherDiscount;
+    } catch (Exception e) {
+        // Log the exception
+        log.error("Error applying voucher: ", e);
+        return BigDecimal.ZERO;
     }
+}
+
+private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDiscountPrice, List<CartListSummaryResponseDto> cartList) {
+    switch (voucher.getVoucherType()) {
+        case CART_TOTAL:
+        case REFERRAL:
+            if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
+                BigDecimal discountPercentage = voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                log.info("hasil total discount =========" + discountPercentage);
+                BigDecimal discountAmount = totalDiscountPrice.multiply(discountPercentage).setScale(2, RoundingMode.HALF_UP);
+                log.info("hasil total total discount amount =========" + discountAmount);
+                return discountAmount;
+            } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
+                log.info("hasil total price" + totalDiscountPrice);
+                log.info("hasil diskon" + voucher.getDiscountValue());
+                log.info("hasil diskon" + totalDiscountPrice.subtract(voucher.getDiscountValue()));
+                BigDecimal discountAmount = voucher.getDiscountValue();
+                return discountAmount;
+            }
+            break;
+
+        case PRODUCT_SPECIFIC:
+            if (voucher.getProduct() != null && voucher.getProduct().getId() != null) {
+                return cartList.stream()
+                    .filter(cart -> cart.getProductId().equals(voucher.getProduct().getId()))
+                    .map(cart -> {
+                        BigDecimal itemPrice = cart.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
+                        if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
+                            return itemPrice.multiply(voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+                        } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
+                            return voucher.getDiscountValue().multiply(BigDecimal.valueOf(cart.getQuantity())).min(itemPrice);
+                        }
+                        return BigDecimal.ZERO;
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+            break;
+
+        case SHIPPING:
+            return BigDecimal.ZERO; // Shipping discount handled separately
+
+        default:
+            throw new IllegalArgumentException("Jenis voucher tidak valid");
+    }
+    return BigDecimal.ZERO;
+}
 
     @Override
     public OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
@@ -312,8 +420,6 @@ public class OrderServiceImpl implements OrderService {
             case "capture":
             case "settlement":
                 order.setStatus(OrderStatus.PROCESSING);
-                //inventory stock kurang
-                // inventoryService.substractStock(orderId)
                 break;
             case "pending":
                 order.setStatus(OrderStatus.PENDING_PAYMENT);
@@ -386,29 +492,24 @@ public class OrderServiceImpl implements OrderService {
                 break;
         }
     }
-
     @Override
     public BigDecimal getTotalAmountAllStore() {
         return orderItemRepository.sumTotalAmountFromAllOrders();
     }
-
     @Override
     public BigDecimal getTotalAmountFromOrdersLastWeek() {
         Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastWeek(oneWeekAgo);
     }
-
     @Override
     public BigDecimal getTotalAmountFromOrdersLastMonth() {
         Instant oneMonthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastMonth(oneMonthAgo);
     }
-
     @Override
     public BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId) {
         return orderItemRepository.getTotalAmountByStoreAndCategory(storeId, categoryId);
     }
-
     @Override
     public BigDecimal getTotalAmountByStoreId(Long storeId) {
         return orderItemRepository.getTotalAmountByStore(storeId);
