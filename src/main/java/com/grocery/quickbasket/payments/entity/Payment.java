@@ -2,9 +2,8 @@ package com.grocery.quickbasket.payments.entity;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-
+import java.util.UUID;
 import org.hibernate.annotations.ColumnDefault;
-
 import com.grocery.quickbasket.order.entity.Order;
 
 import jakarta.persistence.Column;
@@ -43,7 +42,7 @@ public class Payment {
     private String paymentMethod;
 
     @Column(name = "transaction_id")
-    private Long transactionId;
+    private String transactionId;
 
     @Column(name = "payment_proof_url")
     private String paymentProof;
