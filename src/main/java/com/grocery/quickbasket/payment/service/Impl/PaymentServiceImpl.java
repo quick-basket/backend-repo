@@ -113,7 +113,7 @@ public class PaymentServiceImpl implements PaymentService {
         if ("COMPLETED".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PROCESSING);
             inventoryService.deleteStock(order);
-        } else if ("PENDING".equals(requestDto.getPaymentStatus())) {
+        } else if ("PAYMENT_CONFIRMATION".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PENDING_PAYMENT);
         } else if ("CANCELED".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.CANCELED);
