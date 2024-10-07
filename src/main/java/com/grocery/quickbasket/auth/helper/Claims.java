@@ -1,6 +1,5 @@
 package com.grocery.quickbasket.auth.helper;
 
-import lombok.extern.java.Log;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;

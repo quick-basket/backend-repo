@@ -27,4 +27,16 @@ public class InventoryJournalController {
         List<InventoryJournalDto> journalDtos = inventoryJournalService.getAllByStoreId(storeId);
         return Response.successResponse("fetch all journals", journalDtos);
     }
+
+    @GetMapping("/{inventoryId}/in")
+    public ResponseEntity<?> getTotalIn(@PathVariable Long inventoryId) {
+        int totalIn = inventoryJournalService.getTotalIn(inventoryId);
+        return Response.successResponse("get all total in", totalIn);
+    }
+
+    @GetMapping("/{inventoryId}/out")
+    public ResponseEntity<?> getTotalOut(@PathVariable Long inventoryId) {
+        int totalOut = inventoryJournalService.getTotalOut(inventoryId);
+        return Response.successResponse("get all total out", totalOut);
+    }
 }

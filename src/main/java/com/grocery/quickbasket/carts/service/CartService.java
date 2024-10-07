@@ -17,4 +17,5 @@ public interface CartService {
     void deleteCart(Long id);
     CartSummaryResponseDto getCartSummary(Long storeId);
     List<CartListResponseDto> getAllCartByUserIdWithStoreId(Long storeId);
+    void deleteAllCartByUserIdAndStoreId(Long storeId);
 }

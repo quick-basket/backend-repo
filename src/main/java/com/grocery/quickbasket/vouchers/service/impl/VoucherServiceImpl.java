@@ -18,7 +18,10 @@ import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 import com.grocery.quickbasket.vouchers.repository.VoucherRepository;
 import com.grocery.quickbasket.vouchers.service.VoucherService;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class VoucherServiceImpl implements VoucherService{
 
     private final VoucherRepository voucherRepository;
