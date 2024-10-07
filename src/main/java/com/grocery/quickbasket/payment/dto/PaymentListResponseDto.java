@@ -1,10 +1,10 @@
-package com.grocery.quickbasket.payments.dto;
+package com.grocery.quickbasket.payment.dto;
+
+import com.grocery.quickbasket.payment.entity.Payment;
+import com.grocery.quickbasket.payment.entity.PaymentStatus;
+import lombok.Data;
 
 import java.math.BigDecimal;
-
-import com.grocery.quickbasket.payments.entity.Payment;
-
-import lombok.Data;
 
 @Data
 public class PaymentListResponseDto {
@@ -15,7 +15,7 @@ public class PaymentListResponseDto {
     private BigDecimal amount;
     private String paymentMethod;
     private String paymentProof;
-    private String paymentStatus;
+    private PaymentStatus paymentStatus;
 
     public static PaymentListResponseDto mapToDto(Payment payment) {
         PaymentListResponseDto dto = new PaymentListResponseDto();
@@ -24,7 +24,7 @@ public class PaymentListResponseDto {
         dto.setStoreId(payment.getOrder().getStore().getId());
         dto.setAmount(payment.getAmount());
         dto.setPaymentMethod(payment.getPaymentMethod());
-        dto.setPaymentProof(payment.getPaymentProof());
+        dto.setPaymentProof(payment.getPaymentProofUrl());
         dto.setPaymentStatus(payment.getPaymentStatus());
         return dto;
     }

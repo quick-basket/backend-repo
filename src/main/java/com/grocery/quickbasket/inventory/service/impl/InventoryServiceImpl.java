@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.grocery.quickbasket.order.entity.Order;
+import com.grocery.quickbasket.order.entity.OrderItem;
+import com.grocery.quickbasket.order.repository.OrderItemRepository;
 import org.springframework.stereotype.Service;
 
 import com.grocery.quickbasket.discounts.dto.DiscountProductListDto;
@@ -41,14 +44,16 @@ public class InventoryServiceImpl implements InventoryService{
     private final InventoryJournalRepository inventoryJournalRepository;
     private final ProductImageRepository productImageRepository;
     private final DiscountRepository discountRepository;
+    private final OrderItemRepository orderItemRepository;
     
-    public InventoryServiceImpl (InventoryRepository inventoryRepository, ProductRepository productRepository, StoreRepository storeRepository, InventoryJournalRepository inventoryJournalRepository, ProductImageRepository productImageRepository, DiscountRepository discountRepository) {
+    public InventoryServiceImpl (InventoryRepository inventoryRepository, ProductRepository productRepository, StoreRepository storeRepository, InventoryJournalRepository inventoryJournalRepository, ProductImageRepository productImageRepository, DiscountRepository discountRepository, OrderItemRepository orderItemRepository) {
         this.inventoryRepository = inventoryRepository;
         this.productRepository= productRepository;
         this.storeRepository = storeRepository;
         this.inventoryJournalRepository = inventoryJournalRepository;
         this.productImageRepository = productImageRepository;
         this.discountRepository = discountRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     @Override
@@ -102,6 +107,35 @@ public InventoryResponseDto updateInventory(Long id, InventoryRequestUpdateDto u
             inventoryRepository.deleteById(id);
         } else {
             throw new DataNotFoundException("product category not found with id " + id);
+        }
+    }
+
+    @Override
+    public void deleteStock(Order order) {
+        Long storeId = order.getStore().getId();
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+
+        for (OrderItem orderItem : orderItems) {
+            Long productId = orderItem.getProduct().getId();
+            int orderQuantity = orderItem.getQuantity();
+
+            Inventory inventory = inventoryRepository.findByProductIdAndStoreId(productId, storeId)
+                    .orElseThrow(() -> new DataNotFoundException("Inventory not found for productId: " + productId + " and storeId: " + storeId));
+
+            int currentQuantity = inventory.getQuantity();
+            if (currentQuantity < orderQuantity) {
+                throw new DataNotFoundException("Insufficient inventory for productId: " + productId);
+            }
+            int newQuantity = currentQuantity - orderQuantity;
+            inventory.setQuantity(newQuantity);
+
+            InventoryJournal journal = new InventoryJournal();
+            journal.setInventory(inventory);
+            journal.setQuantityChange(-orderQuantity);
+
+            inventory.getJournals().add(journal);
+            inventoryRepository.save(inventory);
+
         }
     }
 

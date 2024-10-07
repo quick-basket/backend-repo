@@ -1,5 +1,6 @@
 package com.grocery.quickbasket.order.controller;
 
+import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.order.dto.*;
 import com.grocery.quickbasket.order.entity.Order;
@@ -24,9 +25,9 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @GetMapping("/checkout")
-    public ResponseEntity<?> getCheckoutOrderSummary (@RequestParam(required = false) Long userVoucherId) {
-        return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart(userVoucherId));
+    @GetMapping("/checkout/{storeId}")
+    public ResponseEntity<?> getCheckoutOrderSummary (@PathVariable Long storeId, @RequestParam(required = false) Long userVoucherId) {
+        return Response.successResponse("Summary fetched", orderService.createCheckoutSummaryFromCart(storeId, userVoucherId));
     }
 
     @GetMapping("/{id}")
@@ -39,16 +40,24 @@ public class OrderController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<?> getUserOrders (
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return Response.successResponse("Get All Orders", orderService.getUserOrders(page, size));
+    }
+
     @GetMapping("/store/{storeId}")
     public ResponseEntity<?> getAllOrderByStoreAndUserId(@PathVariable Long storeId) {
         List<OrderListResponseDto> orders = orderService.getAllOrderByStoreIdAndUserId(storeId);
         return Response.successResponse("success fetch all order", orders);
     }
 
-    @PostMapping("/create-pending")
-    public ResponseEntity<?> createPendingOrder(@RequestBody CheckoutDto checkoutData, @RequestParam String paymentType) {
+    @PostMapping()
+    public ResponseEntity<?> createOrder(@RequestBody CheckoutDto checkoutData, @RequestParam String paymentType) {
         try {
-            OrderWithMidtransResponseDto pendingOrder = orderService.createOrRetrievePendingOrder(checkoutData, paymentType);
+            OrderWithMidtransResponseDto pendingOrder = orderService.createOrder(checkoutData, paymentType);
             return Response.successResponse("Order created or retrieved", pendingOrder);
         } catch (MidtransError e) {
             return Response.failedResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "MIDTRANS ERROR", e.getMessage());
@@ -66,6 +75,13 @@ public class OrderController {
         }
     }
 
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingOrders() {
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+        return Response.successResponse("Get pending order", orderService.getPendingOrder(userId));
+    }
+
     @PutMapping("/status/{orderId}")
     public ResponseEntity<?> updateOrderStatus(@PathVariable Long orderId, @RequestBody OrderStatusUpdateRequest orderStatusUpdateRequest) {
         try {
@@ -76,10 +92,15 @@ public class OrderController {
         }
     }
 
-    @PostMapping("/cancel/{orderId}")
-    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId) {
+    @GetMapping("/status/{orderCode}")
+    public ResponseEntity<?> getOrderStatus(@PathVariable String orderCode) throws MidtransError {
+        return Response.successResponse("Got order status", orderService.getOrderStatus(orderCode));
+    }
+
+    @PostMapping("/cancel/{orderCode}")
+    public ResponseEntity<?> cancelOrder(@PathVariable String orderCode) {
         try {
-            Order cancelledOrder = orderService.cancelOrder(orderId);
+            Order cancelledOrder = orderService.cancelOrder(orderCode);
             return Response.successResponse("Order cancelled", cancelledOrder);
         } catch (DataNotFoundException e) {
             return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);
