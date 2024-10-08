@@ -50,9 +50,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -263,7 +265,7 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
 
     @Transactional
     @Override
-    public Order cancelOrder(String orderCode) {
+    public OrderResponseDto cancelOrder(String orderCode) {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
@@ -278,7 +280,8 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
 
         // TODO: Handle inventory updates (return items to stock)
 
-        return orderRepository.save(order);
+        orderRepository.save(order);
+        return new OrderResponseDto().mapToDto(order);
     }
 
     @Override
@@ -515,8 +518,61 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
         return orderItemRepository.getTotalAmountByStore(storeId);
     }
 
+
     @Override
     public BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId) {
         return orderItemRepository.getTotalAmountByStoreAndProduct(storeId, productId);
+    }
+
+    @Override
+    @Transactional
+    public void updateProcessingOrdersToDelivered() {
+        List<Order> processingOrders = orderRepository.findByStatus(OrderStatus.PROCESSING);
+        Instant now = Instant.now();
+
+        for (Order order : processingOrders) {
+            Duration processingTime = Duration.between(order.getUpdatedAt(), now);
+            long processingMinutes = processingTime.toMinutes();
+
+            // Random time process order to delivered
+            long randomDeliveryTime = ThreadLocalRandom.current().nextLong(30, 121);
+
+            if (processingMinutes >= randomDeliveryTime) {
+                order.setStatus(OrderStatus.DELIVERED);
+                orderRepository.save(order);
+                log.info("Updated order {} from processing to delivered", order.getId());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDto confirmOrderDelivery(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Order not found for id: " + orderId));
+
+        if (order.getStatus() != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Order is not in DELIVERED status");
+        }
+
+        order.setStatus(OrderStatus.SHIPPED);
+        Order updatedOrder = orderRepository.save(order);
+        return new OrderResponseDto().mapToDto(updatedOrder);
+    }
+
+    @Override
+    public void updateDeliveredOrdersToCompleted() {
+        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.DELIVERED);
+        Instant now = Instant.now();
+        Duration sevenDays = Duration.ofDays(7);
+
+        for (Order order : deliveredOrders) {
+            Duration timeSinceDelivery = Duration.between(order.getUpdatedAt(), now);
+
+            if (timeSinceDelivery.compareTo(sevenDays) > 0) {
+                order.setStatus(OrderStatus.SHIPPED);
+                orderRepository.save(order);
+            }
+        }
     }
 }
