@@ -117,7 +117,10 @@ public class UserAddressImpl implements UserAddressService {
 
     @Override
     public UserAddressDto getPrimaryAddress() {
-        UserAddress primaryAddress = addressRepository.findByIsPrimaryIsTrue()
+        var claims = Claims.getClaimsFromJwt();
+        Long userId = (Long) claims.get("userId");
+
+        UserAddress primaryAddress = addressRepository.findByIsPrimaryIsTrueAndUserId(userId)
                 .orElseThrow(() -> new DataNotFoundException("Primary Address Not Found"));
 
         return UserAddressDto.fromEntity(primaryAddress);

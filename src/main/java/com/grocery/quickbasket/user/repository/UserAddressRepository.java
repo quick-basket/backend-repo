@@ -28,5 +28,5 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
 
     Optional<UserAddress> findFirstByUserIdAndIdNot(Long userId, Long addressId);
 
-    Optional<UserAddress> findByIsPrimaryIsTrue();
+    Optional<UserAddress> findByIsPrimaryIsTrueAndUserId(Long userId);
 }
