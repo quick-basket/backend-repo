@@ -100,14 +100,30 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/api/v1/auth/**",
                                     "/api/v1/products/**",
-                                    "/api/v1/products/stores/**",
                                     "/api/v1/category/**",
+                                    "/api/v1/stores/**",
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
-                                    "/api/v1/inventory-journals/**",
                                     "/api/v1/location/**",
+                                    "/api/v1/inventory-journals/**",
                                     "/api/v1/midtrans/**").permitAll()
-                            .requestMatchers("/api/v1/stores", "/api/v1/stores/**").hasAuthority("SCOPE_super_admin")
+                            .requestMatchers(
+                                "/api/v1/stores", 
+                                    "api/v1/orders/total-amounts-all-store",
+                                    "api/v1/orders/total-amount-last-week",
+                                    "api/v1/orders/total-amount-last-month",
+                                    "/api/v1/inventory-journals/**"
+                            
+                                    ).hasAuthority("SCOPE_super_admin")
+                            .requestMatchers(
+                                    "api/v1/orders/total-amounts-storeid**",
+                                    "api/v1/category",
+                                    "/api/v1/products/stores/**",
+                                    "api/v1/products/not-in-inventory**",
+                                    "api/v1/inventory/store/**",
+                                    "api/v1/inventory/store/without-discount/**",
+                                    "api/v1/discounts/store/**",
+                                    "/api/v1/inventory-journals/**").hasAuthority("SCOPE_store_admin")
                             .anyRequest().authenticated();
                 })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
