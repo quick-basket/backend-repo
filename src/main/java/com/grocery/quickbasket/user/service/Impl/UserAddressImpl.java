@@ -13,6 +13,7 @@ import lombok.extern.java.Log;
 import org.locationtech.jts.geom.Point;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -101,6 +102,7 @@ public class UserAddressImpl implements UserAddressService {
         return UserAddressDto.fromEntity(existingAddress);
     }
 
+    @Transactional
     @Override
     public UserAddressDto setPrimaryAddress(Long addressId) {
         var claims = Claims.getClaimsFromJwt();

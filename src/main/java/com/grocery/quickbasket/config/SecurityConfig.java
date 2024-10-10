@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.java.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -98,10 +99,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/api/v1/auth/**",
+                    auth
+                            .requestMatchers(HttpMethod.GET, "api/v1/stores/{id}").permitAll()
+                            .requestMatchers("/api/v1/auth/**",
                                     "/api/v1/products/**",
                                     "/api/v1/category/**",
-                                    "/api/v1/stores/**",
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
                                     "/api/v1/location/**",
@@ -112,8 +114,8 @@ public class SecurityConfig {
                                     "api/v1/orders/total-amounts-all-store",
                                     "api/v1/orders/total-amount-last-week",
                                     "api/v1/orders/total-amount-last-month",
-                                    "/api/v1/inventory-journals/**"
-                            
+                                    "/api/v1/inventory-journals/**",
+                                    "/api/v1/stores/**"
                                     ).hasAuthority("SCOPE_super_admin")
                             .requestMatchers(
                                     "api/v1/orders/total-amounts-storeid**",
