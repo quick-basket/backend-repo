@@ -12,8 +12,10 @@ import com.grocery.quickbasket.exceptions.EmailNotExistException;
 import com.grocery.quickbasket.exceptions.PasswordNotMatchException;
 import com.grocery.quickbasket.referrals.entity.Referrals;
 import com.grocery.quickbasket.referrals.repository.ReferralRepository;
+import com.grocery.quickbasket.store.service.StoreAdminService;
 import com.grocery.quickbasket.user.dto.RegisterReqDto;
 import com.grocery.quickbasket.user.dto.RegisterRespDto;
+import com.grocery.quickbasket.user.entity.Role;
 import com.grocery.quickbasket.user.entity.User;
 import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.user.service.UserService;
@@ -51,17 +53,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final VoucherRepository voucherRepository;
     private final UserVoucherRepository userVoucherRepository;
+    private final StoreAdminService storeAdminService;
 
-    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService, ReferralRepository  referralRepository, VoucherRepository voucherRepository, UserRepository userRepository, UserVoucherRepository userVoucherRepository) {
+    public AuthServiceImpl(JwtEncoder jwtEncoder, UserService userService, PasswordEncoder passwordEncoder, AuthRedisRepository authRedisRepository, EmailService emailService, ReferralRepository  referralRepository, VoucherRepository voucherRepository, UserRepository userRepository, UserVoucherRepository userVoucherRepository, StoreAdminService storeAdminService) {
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.authRedisRepository = authRedisRepository;
         this.emailService = emailService;
-        this. referralRepository = referralRepository;
+        this.referralRepository = referralRepository;
         this.userRepository = userRepository;
         this.voucherRepository = voucherRepository;
         this.userVoucherRepository = userVoucherRepository;
+        this.storeAdminService = storeAdminService;
     }
 
     @Transactional
@@ -102,16 +106,24 @@ public class AuthServiceImpl implements AuthService {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(" "));
 
-        Long userId = userService.findByEmail(authentication.getName()).getId();
+        User user = userService.findByEmail(authentication.getName());
+        Long userId = user.getId();
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuer("quick-basket")
                 .issuedAt(now)
                 .expiresAt(now.plus(12, ChronoUnit.HOURS))
                 .subject(authentication.getName())  // Use username as the subject
                 .claim("scope", scope)
-                .claim("userId", userId)
-                .build();
+                .claim("userId", userId);
+
+        // add store_id for store_admin
+        if (user.getRole() == Role.store_admin) {
+            Long storeId = storeAdminService.getStoreIdForUser(userId);
+            claimsBuilder.claim("store_id", storeId);
+        }
+
+        JwtClaimsSet claims = claimsBuilder.build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
