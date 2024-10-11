@@ -9,6 +9,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -40,7 +41,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@Log
+@Slf4j
 public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
@@ -132,24 +133,6 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder()))
-                        .bearerTokenResolver(request -> {
-                            if (isPublicEndpoint(request)) {
-                                return null;
-                            }
-
-                            Cookie[] cookies = request.getCookies();
-                            String authHeader = request.getHeader("Authorization");
-                            if (cookies != null) {
-                                for (Cookie cookie : cookies) {
-                                    if ("sid".equals(cookie.getName())) {
-                                        return cookie.getValue();
-                                    }
-                                }
-                            } else if (authHeader != null && !authHeader.isEmpty()) {
-                                return authHeader.replace("Bearer ", "");
-                            }
-                            return null;
-                        })
                 )
                 .addFilterBefore(tokenBlacklistFilter, UsernamePasswordAuthenticationFilter.class)
                 .userDetailsService(userDetailsService)
@@ -157,26 +140,14 @@ public class SecurityConfig {
                 .build();
     }
 
-    private boolean isPublicEndpoint(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return path.startsWith("/api/v1/auth/") ||
-                path.startsWith("/api/v1/products/") ||
-                path.startsWith("/api/v1/category/") ||
-                path.startsWith("/api/v1/inventory/") ||
-                path.startsWith("/api/v1/discounts/") ||
-                path.startsWith("/api/v1/inventory-journals/") ||
-                path.startsWith("/api/v1/vouchers/") ||
-                path.startsWith("/api/v1/location/");
-    }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-jrairw7l7-fiqra-wardanas-projects.vercel.app/", "https://frontend-repo-mu.vercel.app/"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-mu.vercel.app"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PUT", "OPTIONS", "PATCH", "DELETE"));
         corsConfiguration.setAllowCredentials(true);
-        corsConfiguration.setExposedHeaders(List.of("Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+        corsConfiguration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);

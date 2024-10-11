@@ -192,7 +192,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendVerificationEmail(String email, String prefix, String linkType) {
         String verificationCode = UUID.randomUUID().toString();
-        String verificationLink = "http://localhost:3000/" + linkType + "?code=" + verificationCode;
+        String verificationLink = "https://frontend-repo-git-dev-fiqra-wardanas-projects.vercel.app/" + linkType + "?code=" + verificationCode;
 
         authRedisRepository.saveVerificationToken(email, verificationCode, prefix);
         emailService.sendEmail(email, verificationLink);
