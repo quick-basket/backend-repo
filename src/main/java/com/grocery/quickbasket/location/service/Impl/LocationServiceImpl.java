@@ -6,12 +6,16 @@ import com.grocery.quickbasket.store.dto.StoreWithDistanceDto;
 import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.store.service.StoreService;
 import com.grocery.quickbasket.user.entity.UserAddress;
+import lombok.extern.slf4j.Slf4j;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
+@Slf4j
 public class LocationServiceImpl implements LocationService {
     private final StoreService storeService;
     private final GeometryFactory gef = new GeometryFactory();
@@ -23,6 +27,12 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public StoreWithDistanceDto findNearestStore(UserAddress userAddress) {
         Point location = userAddress.getLocation();
+        log.info("user address user: {}", userAddress.getId());
+        log.info("user address user: {}", userAddress.getAddress());
+        log.info("user address user: {}", userAddress.getLocation());
+        log.info("location user: {}", location);
+        log.info("location user X: {}", location.getX());
+        log.info("location user Y: {}", location.getY());
         Store storeLocation = storeService.findNearestStore(location.getX(), location.getY());
 
         double distance = calculateDistance(userAddress, storeLocation);
@@ -31,6 +41,7 @@ public class LocationServiceImpl implements LocationService {
         StoreWithDistanceDto storeWithDistanceDto = new StoreWithDistanceDto();
         storeWithDistanceDto.setStore(storeDto);
         storeWithDistanceDto.setDistance(distance);
+        storeWithDistanceDto.setDeliveryCost(calculateDeliveryCost(distance));
 
         return storeWithDistanceDto;
     }
@@ -46,6 +57,7 @@ public class LocationServiceImpl implements LocationService {
         StoreWithDistanceDto storeWithDistanceDto = new StoreWithDistanceDto();
         storeWithDistanceDto.setStore(storeDto);
         storeWithDistanceDto.setDistance(distance);
+        storeWithDistanceDto.setDeliveryCost(calculateDeliveryCost(distance));
         return storeWithDistanceDto;
     }
 
@@ -57,5 +69,16 @@ public class LocationServiceImpl implements LocationService {
     @Override
     public Point createPoint(double longitude, double latitude) {
         return gef.createPoint(new Coordinate(longitude, latitude));
+    }
+
+    @Override
+    public BigDecimal calculateDeliveryCost(double distance) {
+        if (distance <= 5.0){
+            return BigDecimal.ZERO;
+        } else {
+            double extraDistance = Math.max(0, distance - 5.0);
+            long extraKm = Math.round(Math.ceil(extraDistance));
+            return new BigDecimal(extraKm * 5000);
+        }
     }
 }

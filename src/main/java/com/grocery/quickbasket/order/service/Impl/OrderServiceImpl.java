@@ -8,6 +8,7 @@ import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.PendingOrderExcerption;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.location.service.LocationService;
 import com.grocery.quickbasket.midtrans.repository.MidtransRedisRepository;
 import com.grocery.quickbasket.midtrans.service.MidtransService;
 import com.grocery.quickbasket.order.dto.*;
@@ -25,6 +26,7 @@ import com.grocery.quickbasket.payment.mapper.MapperHelperPayment;
 import com.grocery.quickbasket.payment.service.PaymentService;
 import com.grocery.quickbasket.products.repository.ProductRepository;
 import com.grocery.quickbasket.store.dto.StoreDto;
+import com.grocery.quickbasket.store.dto.StoreWithDistanceDto;
 import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.store.repository.StoreRepository;
 import com.grocery.quickbasket.store.service.StoreService;
@@ -40,6 +42,7 @@ import com.grocery.quickbasket.vouchers.repository.UserVoucherRepository;
 import com.midtrans.httpclient.error.MidtransError;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.locationtech.jts.geom.Point;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,9 +53,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,6 +76,7 @@ public class OrderServiceImpl implements OrderService {
     private final MidtransRedisRepository midtransRedisRepository;
     private final OrderMapper orderMapper;
     private final UserVoucherRepository userVoucherRepository;
+    private final LocationService locationService;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -79,7 +85,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper, PaymentService paymentService) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper, PaymentService paymentService, LocationService locationService) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -93,6 +99,7 @@ public class OrderServiceImpl implements OrderService {
         this.midtransRedisRepository = midtransRedisRepository;
         this.orderMapper = orderMapper;
         this.userVoucherRepository = userVoucherRepository;
+        this.locationService = locationService;
     }
 
     @Override
@@ -115,7 +122,7 @@ public class OrderServiceImpl implements OrderService {
         recipient.setName(user.getName());
         recipient.setPhone(user.getPhone());
 
-        UserAddress userAddress = UserAddressDto.toEntity(addressService.getPrimaryAddress());
+        UserAddressDto userAddress = addressService.getPrimaryAddress();
         recipient.setAddressId(userAddress.getId());
         recipient.setCity(userAddress.getCity());
         recipient.setFullAddress(userAddress.getAddress());
@@ -143,11 +150,16 @@ public class OrderServiceImpl implements OrderService {
         CartSummaryResponseDto cartSummary = cartService.getCartSummary(storeId);
         CheckoutDto.Summary summary = new CheckoutDto.Summary();
         summary.setSubtotal(cartSummary.getTotalPrice());
-        summary.setDiscount(cartSummary.getTotalDiscount());
+
+        //calculate shipping cost
+        StoreWithDistanceDto storeWithDistanceDto = locationService.findNearestStore(userAddress.getLongitude(), userAddress.getLatitude());
+        log.info("store with distance: {}", storeWithDistanceDto);
+        BigDecimal shippingCost = storeWithDistanceDto.getDeliveryCost();
+        log.info("shipping cost: {}", shippingCost);
+        summary.setShippingCost(shippingCost);
 
         BigDecimal totalBeforeVoucher = cartSummary.getTotalDiscountPrice();
         log.info("=========total voucher{}", totalBeforeVoucher.toString());
-        summary.setShippingCost(BigDecimal.valueOf(5000));
 
         // Apply voucher if provided
         BigDecimal voucherDiscount = BigDecimal.ZERO;
@@ -166,91 +178,91 @@ public class OrderServiceImpl implements OrderService {
         checkoutDto.setSummary(summary);
 
         return checkoutDto;
-}
+    }
 
-private List<CartListSummaryResponseDto> convertToCartListSummary(List<CartListResponseDto> itemListFromCart) {
-    return itemListFromCart.stream()
-        .map(item -> {
-            CartListSummaryResponseDto summary = new CartListSummaryResponseDto();
-            summary.setProductId(item.getProductId());
-            summary.setPrice(item.getPrice());
-            summary.setQuantity(item.getQuantity());
-            // Set other fields as needed
-            return summary;
-        })
-        .collect(Collectors.toList());
-}
+    private List<CartListSummaryResponseDto> convertToCartListSummary(List<CartListResponseDto> itemListFromCart) {
+        return itemListFromCart.stream()
+                .map(item -> {
+                    CartListSummaryResponseDto summary = new CartListSummaryResponseDto();
+                    summary.setProductId(item.getProductId());
+                    summary.setPrice(item.getPrice());
+                    summary.setQuantity(item.getQuantity());
+                    // Set other fields as needed
+                    return summary;
+                })
+                .collect(Collectors.toList());
+    }
 
-public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList, Long userVoucherId) {
-    try {
-        UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
-            .orElseThrow(() -> new DataNotFoundException("Voucher tidak ditemukan atau sudah digunakan"));
+    public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList, Long userVoucherId) {
+        try {
+            UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
+                    .orElseThrow(() -> new DataNotFoundException("Voucher tidak ditemukan atau sudah digunakan"));
 
-        Voucher voucher = userVoucher.getVoucher();
+            Voucher voucher = userVoucher.getVoucher();
 
-        Instant now = Instant.now();
-        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
-            || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
-            throw new IllegalArgumentException("Voucher tidak memenuhi syarat");
+            Instant now = Instant.now();
+            if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
+                    || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
+                throw new IllegalArgumentException("Voucher tidak memenuhi syarat");
+            }
+
+            BigDecimal voucherDiscount = calculateVoucherDiscount(voucher, totalPrice, cartList);
+            // userVoucher.setIsUsed(true);
+            userVoucher.setUsedAt(now);
+            userVoucherRepository.save(userVoucher);
+
+            return voucherDiscount;
+        } catch (Exception e) {
+            // Log the exception
+            log.error("Error applying voucher: ", e);
+            return BigDecimal.ZERO;
         }
+    }
 
-        BigDecimal voucherDiscount = calculateVoucherDiscount(voucher, totalPrice, cartList);
-        // userVoucher.setIsUsed(true);
-        userVoucher.setUsedAt(now);
-        userVoucherRepository.save(userVoucher);
+    private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDiscountPrice, List<CartListSummaryResponseDto> cartList) {
+        switch (voucher.getVoucherType()) {
+            case CART_TOTAL:
+            case REFERRAL:
+                if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
+                    BigDecimal discountPercentage = voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    log.info("hasil total discount =========" + discountPercentage);
+                    BigDecimal discountAmount = totalDiscountPrice.multiply(discountPercentage).setScale(2, RoundingMode.HALF_UP);
+                    log.info("hasil total total discount amount =========" + discountAmount);
+                    return discountAmount;
+                } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
+                    log.info("hasil total price" + totalDiscountPrice);
+                    log.info("hasil diskon" + voucher.getDiscountValue());
+                    log.info("hasil diskon" + totalDiscountPrice.subtract(voucher.getDiscountValue()));
+                    BigDecimal discountAmount = voucher.getDiscountValue();
+                    return discountAmount;
+                }
+                break;
 
-        return voucherDiscount;
-    } catch (Exception e) {
-        // Log the exception
-        log.error("Error applying voucher: ", e);
+            case PRODUCT_SPECIFIC:
+                if (voucher.getProduct() != null && voucher.getProduct().getId() != null) {
+                    return cartList.stream()
+                            .filter(cart -> cart.getProductId().equals(voucher.getProduct().getId()))
+                            .map(cart -> {
+                                BigDecimal itemPrice = cart.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
+                                if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
+                                    return itemPrice.multiply(voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+                                } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
+                                    return voucher.getDiscountValue().multiply(BigDecimal.valueOf(cart.getQuantity())).min(itemPrice);
+                                }
+                                return BigDecimal.ZERO;
+                            })
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                }
+                break;
+
+            case SHIPPING:
+                return BigDecimal.ZERO; // Shipping discount handled separately
+
+            default:
+                throw new IllegalArgumentException("Jenis voucher tidak valid");
+        }
         return BigDecimal.ZERO;
     }
-}
-
-private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDiscountPrice, List<CartListSummaryResponseDto> cartList) {
-    switch (voucher.getVoucherType()) {
-        case CART_TOTAL:
-        case REFERRAL:
-            if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
-                BigDecimal discountPercentage = voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                log.info("hasil total discount =========" + discountPercentage);
-                BigDecimal discountAmount = totalDiscountPrice.multiply(discountPercentage).setScale(2, RoundingMode.HALF_UP);
-                log.info("hasil total total discount amount =========" + discountAmount);
-                return discountAmount;
-            } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
-                log.info("hasil total price" + totalDiscountPrice);
-                log.info("hasil diskon" + voucher.getDiscountValue());
-                log.info("hasil diskon" + totalDiscountPrice.subtract(voucher.getDiscountValue()));
-                BigDecimal discountAmount = voucher.getDiscountValue();
-                return discountAmount;
-            }
-            break;
-
-        case PRODUCT_SPECIFIC:
-            if (voucher.getProduct() != null && voucher.getProduct().getId() != null) {
-                return cartList.stream()
-                    .filter(cart -> cart.getProductId().equals(voucher.getProduct().getId()))
-                    .map(cart -> {
-                        BigDecimal itemPrice = cart.getPrice().multiply(BigDecimal.valueOf(cart.getQuantity()));
-                        if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
-                            return itemPrice.multiply(voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
-                        } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
-                            return voucher.getDiscountValue().multiply(BigDecimal.valueOf(cart.getQuantity())).min(itemPrice);
-                        }
-                        return BigDecimal.ZERO;
-                    })
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            }
-            break;
-
-        case SHIPPING:
-            return BigDecimal.ZERO; // Shipping discount handled separately
-
-        default:
-            throw new IllegalArgumentException("Jenis voucher tidak valid");
-    }
-    return BigDecimal.ZERO;
-}
 
     @Override
     public OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
@@ -263,7 +275,7 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
 
     @Transactional
     @Override
-    public Order cancelOrder(String orderCode) {
+    public OrderResponseDto cancelOrder(String orderCode) {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
 
@@ -274,11 +286,12 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
         order.setStatus(OrderStatus.CANCELED);
 
         // Update associated payment
-        paymentService.updatePaymentStatus(orderCode,PaymentStatus.FAILED);
+        paymentService.updatePaymentStatus(orderCode, PaymentStatus.FAILED);
 
         // TODO: Handle inventory updates (return items to stock)
 
-        return orderRepository.save(order);
+        orderRepository.save(order);
+        return new OrderResponseDto().mapToDto(order);
     }
 
     @Override
@@ -492,31 +505,89 @@ private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDis
                 break;
         }
     }
+
     @Override
     public BigDecimal getTotalAmountAllStore() {
         return orderItemRepository.sumTotalAmountFromAllOrders();
     }
+
     @Override
     public BigDecimal getTotalAmountFromOrdersLastWeek() {
         Instant oneWeekAgo = Instant.now().minus(7, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastWeek(oneWeekAgo);
     }
+
     @Override
     public BigDecimal getTotalAmountFromOrdersLastMonth() {
         Instant oneMonthAgo = Instant.now().minus(30, ChronoUnit.DAYS);
         return orderItemRepository.sumTotalAmountFromOrdersLastMonth(oneMonthAgo);
     }
+
     @Override
     public BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId) {
         return orderItemRepository.getTotalAmountByStoreAndCategory(storeId, categoryId);
     }
+
     @Override
     public BigDecimal getTotalAmountByStoreId(Long storeId) {
         return orderItemRepository.getTotalAmountByStore(storeId);
     }
 
+
     @Override
     public BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId) {
         return orderItemRepository.getTotalAmountByStoreAndProduct(storeId, productId);
+    }
+
+    @Override
+    @Transactional
+    public void updateProcessingOrdersToDelivered() {
+        List<Order> processingOrders = orderRepository.findByStatus(OrderStatus.PROCESSING);
+        Instant now = Instant.now();
+
+        for (Order order : processingOrders) {
+            Duration processingTime = Duration.between(order.getUpdatedAt(), now);
+            long processingMinutes = processingTime.toMinutes();
+
+            // Random time process order to delivered
+            long randomDeliveryTime = ThreadLocalRandom.current().nextLong(30, 121);
+
+            if (processingMinutes >= randomDeliveryTime) {
+                order.setStatus(OrderStatus.DELIVERED);
+                orderRepository.save(order);
+                log.info("Updated order {} from processing to delivered", order.getId());
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDto confirmOrderDelivery(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new DataNotFoundException("Order not found for id: " + orderId));
+
+        if (order.getStatus() != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Order is not in DELIVERED status");
+        }
+
+        order.setStatus(OrderStatus.SHIPPED);
+        Order updatedOrder = orderRepository.save(order);
+        return new OrderResponseDto().mapToDto(updatedOrder);
+    }
+
+    @Override
+    public void updateDeliveredOrdersToCompleted() {
+        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.DELIVERED);
+        Instant now = Instant.now();
+        Duration sevenDays = Duration.ofDays(7);
+
+        for (Order order : deliveredOrders) {
+            Duration timeSinceDelivery = Duration.between(order.getUpdatedAt(), now);
+
+            if (timeSinceDelivery.compareTo(sevenDays) > 0) {
+                order.setStatus(OrderStatus.SHIPPED);
+                orderRepository.save(order);
+            }
+        }
     }
 }

@@ -50,13 +50,13 @@ public class StoreServiceImpl implements StoreService{
 
     @Override
     public StoreDto getStoreById(Long id) {
-        var claims = Claims.getClaimsFromJwt();
-        Long userId = (Long) claims.get("userId");
-        String scope = (String) claims.get("scope");
-
-        if (!storeAdminRepository.existsByUserId(userId) && !Objects.equals(scope, "super_admin")){
-            throw new UserIdNotFoundException("User Id is not authorize");
-        }
+//        var claims = Claims.getClaimsFromJwt();
+//        Long userId = (Long) claims.get("userId");
+//        String scope = (String) claims.get("scope");
+//
+//        if (!storeAdminRepository.existsByUserId(userId) && !Objects.equals(scope, "super_admin")){
+//            throw new UserIdNotFoundException("User Id is not authorize");
+//        }
 
         Store currentStore = storeRepository.findById(id)
                 .orElseThrow(() -> new StoreNotFoundException("Store not found"));

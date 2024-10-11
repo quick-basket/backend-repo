@@ -110,10 +110,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         Order order = payment.getOrder();
 
-        if ("PAID".equals(requestDto.getPaymentStatus())) {
+        if ("COMPLETED".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PROCESSING);
             inventoryService.deleteStock(order);
-        } else if ("PENDING".equals(requestDto.getPaymentStatus())) {
+        } else if ("PAYMENT_CONFIRMATION".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PENDING_PAYMENT);
         } else if ("CANCELED".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.CANCELED);
@@ -126,7 +126,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentListResponseDto> getAllPaymentListByStoreId(Long storeId) {
-        List<Payment> payments = paymentRepository.findByOrderStoreId(storeId);
+        List<Payment> payments = paymentRepository.findByOrderStoreIdAndPaymentProofUrlIsNotNull(storeId);
 
         return payments.stream()
                 .map(PaymentListResponseDto::mapToDto)
