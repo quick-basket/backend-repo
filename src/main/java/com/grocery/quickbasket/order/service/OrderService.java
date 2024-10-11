@@ -13,7 +13,7 @@ public interface OrderService {
     CheckoutDto createCheckoutSummaryFromCart(Long storeId, Long userVoucherId);
     OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus);
     @Transactional
-    Order cancelOrder(String orderCode);
+    OrderResponseDto cancelOrder(String orderCode);
     OrderListDetailDto getUserOrders(int page, int size);
     Order getOrder(Long orderId);
     OrderWithMidtransResponseDto getPendingOrder(Long userId);
@@ -23,10 +23,15 @@ public interface OrderService {
     OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
     OrderResponseDto updateOrderStatusAfterPayment(String orderId, String paymentStatus) throws MidtransError;
     OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError;
+
     BigDecimal getTotalAmountAllStore();
     BigDecimal getTotalAmountFromOrdersLastWeek();
     BigDecimal getTotalAmountFromOrdersLastMonth();
     BigDecimal getTotalAmountByStoreAndCategory(Long storeId, Long categoryId);
     BigDecimal getTotalAmountByStoreAndProduct(Long storeId, Long productId);
     BigDecimal getTotalAmountByStoreId(Long storeId);
+
+    void updateProcessingOrdersToDelivered();
+    OrderResponseDto confirmOrderDelivery(Long orderId);
+    void updateDeliveredOrdersToCompleted();
 }

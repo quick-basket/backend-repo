@@ -100,7 +100,7 @@ public class OrderController {
     @PostMapping("/cancel/{orderCode}")
     public ResponseEntity<?> cancelOrder(@PathVariable String orderCode) {
         try {
-            Order cancelledOrder = orderService.cancelOrder(orderCode);
+            OrderResponseDto cancelledOrder = orderService.cancelOrder(orderCode);
             return Response.successResponse("Order cancelled", cancelledOrder);
         } catch (DataNotFoundException e) {
             return Response.failedResponse("Order not found", HttpStatus.NOT_FOUND);

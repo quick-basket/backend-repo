@@ -5,9 +5,12 @@ import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.user.entity.UserAddress;
 import org.locationtech.jts.geom.Point;
 
+import java.math.BigDecimal;
+
 public interface LocationService {
     StoreWithDistanceDto findNearestStore(UserAddress userAddress);
     StoreWithDistanceDto findNearestStore(double latitude, double longitude);
     double calculateDistance(UserAddress userAddress, Store store);
     Point createPoint(double longitude, double latitude);
+    BigDecimal calculateDeliveryCost(double distance);
 }
