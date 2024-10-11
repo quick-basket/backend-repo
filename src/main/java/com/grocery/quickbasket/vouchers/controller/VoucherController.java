@@ -42,9 +42,13 @@ public class VoucherController {
         return Response.successResponse("get voucher", voucherService.getVoucherById(id));
     }
 
+    @GetMapping("/userId")
+    public ResponseEntity<?>getAllVouchersByUserId() {
+        return Response.successResponse("get all vouchers", voucherService.getAllVouchersByUserId());
+    }
     @GetMapping
     public ResponseEntity<?>getAllVouchers() {
-        return Response.successResponse("get all vouchers", voucherService.getAllVouchersByUserId());
+        return Response.successResponse("get all vouchers", voucherService.getAllVouchers());
     }
 
     @DeleteMapping("/{id}")

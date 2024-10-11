@@ -44,13 +44,11 @@ import java.util.List;
 public class SecurityConfig {
     private final RsaConfigProperties rsaConfigProperties;
     private final UserDetailsService userDetailsService;
-    private final CorsConfigurationSourceImpl corsConfigurationSource;
     private final TokenBlacklistFilter tokenBlacklistFilter;
 
-    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, CorsConfigurationSourceImpl corsConfigurationSource, TokenBlacklistFilter tokenBlacklistFilter) {
+    public SecurityConfig(RsaConfigProperties rsaConfigProperties, UserDetailsService userDetailsService, TokenBlacklistFilter tokenBlacklistFilter) {
         this.rsaConfigProperties = rsaConfigProperties;
         this.userDetailsService = userDetailsService;
-        this.corsConfigurationSource = corsConfigurationSource;
         this.tokenBlacklistFilter = tokenBlacklistFilter;
     }
 
@@ -104,9 +102,11 @@ public class SecurityConfig {
                             .requestMatchers("/api/v1/auth/**",
                                     "/api/v1/products/**",
                                     "/api/v1/category/**",
+                                    "/api/v1/stores/**",
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
                                     "/api/v1/location/**",
+                                    "/api/v1/vouchers/**",
                                     "/api/v1/inventory-journals/**",
                                     "/api/v1/midtrans/**").permitAll()
                             .requestMatchers(
@@ -115,6 +115,7 @@ public class SecurityConfig {
                                     "api/v1/orders/total-amount-last-week",
                                     "api/v1/orders/total-amount-last-month",
                                     "/api/v1/inventory-journals/**",
+                                    "api/v1/orders/total-amounts-storeid**",
                                     "/api/v1/stores/**"
                                     ).hasAuthority("SCOPE_super_admin")
                             .requestMatchers(
