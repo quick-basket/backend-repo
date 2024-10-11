@@ -1,5 +1,7 @@
 package com.grocery.quickbasket.vouchers.service.impl;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -9,6 +11,8 @@ import com.grocery.quickbasket.auth.helper.Claims;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.products.entity.Product;
 import com.grocery.quickbasket.products.repository.ProductRepository;
+import com.grocery.quickbasket.user.entity.User;
+import com.grocery.quickbasket.user.repository.UserRepository;
 import com.grocery.quickbasket.vouchers.dto.UserVoucherResponseDto;
 import com.grocery.quickbasket.vouchers.dto.VoucherRequestDto;
 import com.grocery.quickbasket.vouchers.dto.VoucherResponseDto;
@@ -27,19 +31,27 @@ public class VoucherServiceImpl implements VoucherService{
     private final VoucherRepository voucherRepository;
     private final ProductRepository productRepository;
     private final UserVoucherRepository userVoucherRepository;
+    private final UserRepository userRepository;
 
-    public VoucherServiceImpl(VoucherRepository voucherRepository, ProductRepository productRepository, UserVoucherRepository userVoucherRepository) {
+    public VoucherServiceImpl(VoucherRepository voucherRepository, ProductRepository productRepository, UserVoucherRepository userVoucherRepository, UserRepository userRepository) {
         this.voucherRepository = voucherRepository;
         this.productRepository = productRepository;
         this.userVoucherRepository = userVoucherRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public VoucherResponseDto createVoucher(VoucherRequestDto voucherDTO) {
-        Product product = productRepository.findById(voucherDTO.getProductId())
-            .orElseThrow(() -> new DataNotFoundException("category not found!"));
         Voucher voucher = new Voucher();
-        voucher.setProduct(product);
+        
+        if (voucherDTO.getProductId() != null) {
+            Product product = productRepository.findById(voucherDTO.getProductId())
+                .orElseThrow(() -> new DataNotFoundException("Product not found!"));
+            voucher.setProduct(product);
+        } else {
+            voucher.setProduct(null);
+        }
+        
         voucher.setCode(voucherDTO.getCode());
         voucher.setVoucherType(voucherDTO.getVoucherType());
         voucher.setDiscountType(voucherDTO.getDiscountType());
@@ -47,8 +59,8 @@ public class VoucherServiceImpl implements VoucherService{
         voucher.setMinPurchase(voucherDTO.getMinPurchase());
         voucher.setStartDate(voucherDTO.getStartDate());
         voucher.setEndDate(voucherDTO.getEndDate());
+        
         Voucher savedVoucher = voucherRepository.save(voucher);
-
         return VoucherResponseDto.mapToDto(savedVoucher);
     }
 
@@ -56,9 +68,13 @@ public class VoucherServiceImpl implements VoucherService{
     public VoucherResponseDto updateVoucher(Long id, VoucherRequestDto voucherDTO) {
         Voucher existingVoucher = voucherRepository.findById(id)
             .orElseThrow(() -> new DataNotFoundException("category not found!"));
-        Product product = productRepository.findById(voucherDTO.getProductId())
-            .orElseThrow(() -> new DataNotFoundException("product not found!"));
-        existingVoucher.setProduct(product);
+        if (voucherDTO.getProductId() != null) {
+            Product product = productRepository.findById(voucherDTO.getProductId())
+                .orElseThrow(() -> new DataNotFoundException("Product not found!"));
+            existingVoucher.setProduct(product);
+        } else {
+            existingVoucher.setProduct(null);
+        }
         existingVoucher.setCode(voucherDTO.getCode());
         existingVoucher.setVoucherType(voucherDTO.getVoucherType());
         existingVoucher.setDiscountType(voucherDTO.getDiscountType());
@@ -90,6 +106,10 @@ public class VoucherServiceImpl implements VoucherService{
     public void deleteVoucher(Long id) {
         Voucher existingVoucher = voucherRepository.findByIdAndDeletedAtIsNull(id)
             .orElseThrow(() -> new DataNotFoundException("voucher not found!"));
+        List<UserVoucher> userVouchers = userVoucherRepository.findByVoucherId(id);
+        for (UserVoucher userVoucher : userVouchers) {
+            userVoucherRepository.delete(userVoucher); 
+        }
         existingVoucher.softDelete();
         voucherRepository.save(existingVoucher);
     }
@@ -104,5 +124,29 @@ public class VoucherServiceImpl implements VoucherService{
             .map(UserVoucherResponseDto::mapToDto)
             .collect(Collectors.toList());
     }
+
+    @Override
+    public void createUserVoucherIfEligible(Long userId, BigDecimal amount) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new DataNotFoundException("User not found with id " + userId));
+
+        Instant now = Instant.now();
+        List<Voucher> eligibleVouchers = voucherRepository.findByMinPurchaseLessThanEqualAndEndDateAfterAndDeletedAtIsNull(amount, now);
+
+        for (Voucher voucher : eligibleVouchers) {
+            boolean userVoucherExists = userVoucherRepository.existsByUserIdAndVoucherId(userId, voucher.getId());
+
+            if (!userVoucherExists) {
+                UserVoucher newUserVoucher = new UserVoucher();
+                newUserVoucher.setUser(user);
+                newUserVoucher.setVoucher(voucher);
+                newUserVoucher.setIsUsed(false);
+                newUserVoucher.setUsedAt(null);
+                
+                userVoucherRepository.save(newUserVoucher);
+            }
+        }
+    }
+
 
 }

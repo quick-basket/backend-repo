@@ -100,6 +100,7 @@ public class SecurityConfig {
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
                                     "/api/v1/location/**",
+                                    "/api/v1/vouchers/**",
                                     "/api/v1/inventory-journals/**",
                                     "/api/v1/midtrans/**").permitAll()
                             .requestMatchers(
@@ -107,7 +108,8 @@ public class SecurityConfig {
                                     "api/v1/orders/total-amounts-all-store",
                                     "api/v1/orders/total-amount-last-week",
                                     "api/v1/orders/total-amount-last-month",
-                                    "/api/v1/inventory-journals/**"
+                                    "/api/v1/inventory-journals/**",
+                                    "api/v1/orders/total-amounts-storeid**"
                             
                                     ).hasAuthority("SCOPE_super_admin")
                             .requestMatchers(

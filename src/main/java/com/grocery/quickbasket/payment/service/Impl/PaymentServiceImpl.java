@@ -13,11 +13,12 @@ import com.grocery.quickbasket.payment.entity.Payment;
 import com.grocery.quickbasket.payment.entity.PaymentStatus;
 import com.grocery.quickbasket.payment.repository.PaymentRepository;
 import com.grocery.quickbasket.payment.service.PaymentService;
+import com.grocery.quickbasket.vouchers.service.VoucherService;
+
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,13 +29,16 @@ public class PaymentServiceImpl implements PaymentService {
     private final CloudinaryService cloudinaryService;
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
+    private final VoucherService voucherService;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, @Lazy OrderService orderService, CloudinaryService cloudinaryService, OrderRepository orderRepository, InventoryService inventoryService) {
+
+    public PaymentServiceImpl(PaymentRepository paymentRepository, @Lazy OrderService orderService, CloudinaryService cloudinaryService, OrderRepository orderRepository, InventoryService inventoryService, VoucherService voucherService) {
         this.paymentRepository = paymentRepository;
         this.orderService = orderService;
         this.cloudinaryService = cloudinaryService;
         this.orderRepository = orderRepository;
         this.inventoryService = inventoryService;
+        this.voucherService = voucherService;
     }
 
     @Override
@@ -113,6 +117,7 @@ public class PaymentServiceImpl implements PaymentService {
         if ("COMPLETED".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PROCESSING);
             inventoryService.deleteStock(order);
+            voucherService.createUserVoucherIfEligible(order.getUserId(), payment.getAmount());
         } else if ("PAYMENT_CONFIRMATION".equals(requestDto.getPaymentStatus())) {
             order.setStatus(OrderStatus.PENDING_PAYMENT);
         } else if ("CANCELED".equals(requestDto.getPaymentStatus())) {
@@ -123,6 +128,8 @@ public class PaymentServiceImpl implements PaymentService {
         Payment updatedPayment = paymentRepository.save(payment);
         return PaymentListResponseDto.mapToDto(updatedPayment);
     }
+
+    
 
     @Override
     public List<PaymentListResponseDto> getAllPaymentListByStoreId(Long storeId) {

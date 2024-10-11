@@ -1,4 +1,5 @@
 package com.grocery.quickbasket.vouchers.service;
+import java.math.BigDecimal;
 import java.util.List;
 
 import com.grocery.quickbasket.vouchers.dto.UserVoucherResponseDto;
@@ -13,4 +14,5 @@ public interface VoucherService {
     List<VoucherResponseDto> getAllVouchers();
     List<UserVoucherResponseDto> getAllVouchersByUserId();
     void deleteVoucher(Long id);
+    void createUserVoucherIfEligible(Long userId, BigDecimal amount);
 }
