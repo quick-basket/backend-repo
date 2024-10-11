@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.java.Log;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -29,7 +30,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -91,9 +97,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, HandlerMappingIntrospector introspector) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/api/v1/auth/**",
+                    auth
+                            .requestMatchers(HttpMethod.GET, "api/v1/stores/{id}").permitAll()
+                            .requestMatchers("/api/v1/auth/**",
                                     "/api/v1/products/**",
                                     "/api/v1/category/**",
                                     "/api/v1/stores/**",
@@ -110,7 +118,7 @@ public class SecurityConfig {
                                     "api/v1/orders/total-amount-last-month",
                                     "/api/v1/inventory-journals/**",
                                     "api/v1/orders/total-amounts-storeid**"
-                            
+                                    "/api/v1/stores/**"
                                     ).hasAuthority("SCOPE_super_admin")
                             .requestMatchers(
                                     "api/v1/orders/total-amounts-storeid**",
@@ -161,5 +169,19 @@ public class SecurityConfig {
                 path.startsWith("/api/v1/inventory-journals/") ||
                 path.startsWith("/api/v1/vouchers/") ||
                 path.startsWith("/api/v1/location/");
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-jrairw7l7-fiqra-wardanas-projects.vercel.app/", "https://frontend-repo-mu.vercel.app/"));
+        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PUT", "OPTIONS", "PATCH", "DELETE"));
+        corsConfiguration.setAllowCredentials(true);
+        corsConfiguration.setExposedHeaders(List.of("Authorization", "Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfiguration);
+        return source;
     }
 }
