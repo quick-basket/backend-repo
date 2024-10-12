@@ -145,6 +145,7 @@ public class AuthServiceImpl implements AuthService {
         log.info(passwordReqDto.toString());
         User user = userService.findByEmail(email);
         user.setPassword(passwordEncoder.encode(passwordReqDto.getPassword()));
+        user.setIsVerified(true);
         userService.save(user);
 
         authRedisRepository.deleteVerificationToken(passwordReqDto.getVerificationCode(), AuthRedisRepository.REGISTRATION_PREFIX);
@@ -192,7 +193,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendVerificationEmail(String email, String prefix, String linkType) {
         String verificationCode = UUID.randomUUID().toString();
-        String verificationLink = "https://frontend-repo-git-dev-fiqra-wardanas-projects.vercel.app/" + linkType + "?code=" + verificationCode;
+        String verificationLink = "https://quick-basket-fe.netlify.app/" + linkType + "?code=" + verificationCode;
 
         authRedisRepository.saveVerificationToken(email, verificationCode, prefix);
         emailService.sendEmail(email, verificationLink);
