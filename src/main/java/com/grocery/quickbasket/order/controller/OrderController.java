@@ -148,4 +148,9 @@ public class OrderController {
         BigDecimal totalAmount = orderService.getTotalAmountByStoreId(storeId);
         return Response.successResponse("get total amount", totalAmount);
     }
+
+    @PostMapping("/{orderCode}/ship")
+    public OrderResponseDto shipOrder(@PathVariable String orderCode) {
+        return orderService.markOrderAsShipped(orderCode);
+    }
 }
