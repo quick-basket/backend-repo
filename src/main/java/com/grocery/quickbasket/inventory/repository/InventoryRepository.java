@@ -13,4 +13,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     List<Inventory> findByStoreId(Long storeId);
     Page<Inventory> findAllByStoreId(Long storeId, Pageable pageable);
     Optional<Inventory> findByProductIdAndStoreId(Long productId, Long storeId);
+    Page<Inventory> findAllByStoreIdAndProductNameContainingIgnoreCaseAndProductCategoryName(Long storeId, String name, String category, Pageable pageable);
+    Page<Inventory> findAllByStoreIdAndProductNameContainingIgnoreCase(Long storeId, String name, Pageable pageable);
+    Page<Inventory> findAllByStoreIdAndProductCategoryName(Long storeId, String category, Pageable pageable);
 }

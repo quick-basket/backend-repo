@@ -88,12 +88,14 @@ public class ProductController {
     @GetMapping("/stores/{storeId}")
     public ResponseEntity<?> getAllProductsByStoreId(
         @PathVariable Long storeId,  
-        @RequestParam(defaultValue = "0") int page, 
+        @RequestParam(required = false) String name,
+        @RequestParam(required = false) String categoryName,
+        @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "10") int size
-        ) {
-            Pageable pageable = PageRequest.of(page, size);
-        return Response.successResponse("get all products", productService.getAllProductsByStoreId(storeId, pageable));
-
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ProductListResponseDto> products = productService.getAllProductsByStoreId(storeId, name, categoryName, pageable);
+        return Response.successResponse("get all products", products);
     }
 
      @GetMapping

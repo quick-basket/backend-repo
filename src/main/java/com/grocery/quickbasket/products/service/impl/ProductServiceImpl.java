@@ -211,8 +211,17 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, Pageable pageable) {
-    Page<Inventory> inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
+public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, String name, String categoryName, Pageable pageable) {
+    Page<Inventory> inventories;
+    if (name != null && !name.isEmpty() && categoryName != null) {
+        inventories = inventoryRepository.findAllByStoreIdAndProductNameContainingIgnoreCaseAndProductCategoryName(storeId, name, categoryName, pageable);
+    } else if (name != null && !name.isEmpty()) {
+        inventories = inventoryRepository.findAllByStoreIdAndProductNameContainingIgnoreCase(storeId, name, pageable);
+    } else if (categoryName != null) {
+        inventories = inventoryRepository.findAllByStoreIdAndProductCategoryName(storeId, categoryName, pageable);
+    } else {
+        inventories = inventoryRepository.findAllByStoreId(storeId, pageable);
+    }
     List<ProductListResponseDto> responseDtos = new ArrayList<>();
 
     Map<Long, List<Inventory>> productInventoryMap = inventories.getContent().stream()
