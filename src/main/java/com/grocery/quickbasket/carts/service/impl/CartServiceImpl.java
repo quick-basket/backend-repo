@@ -311,4 +311,12 @@ public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartList
         dto.setEndDate(voucher.getEndDate());
         return dto;
     }
+
+    @Override
+    public void deleteCart(Long id) {
+        if (id == null) {
+            throw new DataNotFoundException("Cart ID must not be null");
+        }
+        cartRepository.deleteById(id);
+    }
 }
