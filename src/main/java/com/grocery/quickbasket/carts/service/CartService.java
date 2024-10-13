@@ -12,6 +12,7 @@ import com.grocery.quickbasket.carts.entity.Cart;
 public interface CartService {
     List<CartListResponseDto> getAllCartByUserId();
     Optional<Cart> getCartById(Long id);
+    void deleteCart(Long id);
     CartResponseDto createCart(CartRequestDto requestDto);
     CartResponseDto updateCart(Long id, CartRequestDto requestDto);
     void deleteCartByUserIdAndInventoryIds(Long userId, List<Long> inventoryIds);

@@ -19,10 +19,14 @@ public interface OrderService {
     OrderWithMidtransResponseDto getPendingOrder(Long userId);
     Order createOrderFromCheckoutData(CheckoutDto checkoutData) throws MidtransError;
     List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
+
     @Transactional
     OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;
     OrderResponseDto updateOrderStatusAfterPayment(String orderId, String paymentStatus) throws MidtransError;
     OrderWithMidtransResponseDto getOrderStatus(String orderCode) throws MidtransError;
+
+    @Transactional
+    OrderResponseDto markOrderAsShipped(String orderCode);
 
     BigDecimal getTotalAmountAllStore();
     BigDecimal getTotalAmountFromOrdersLastWeek();

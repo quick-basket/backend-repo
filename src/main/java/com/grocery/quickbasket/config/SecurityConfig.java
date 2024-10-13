@@ -6,9 +6,6 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.java.Log;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -107,8 +104,10 @@ public class SecurityConfig {
                                     "/api/v1/inventory/**",
                                     "/api/v1/discounts/**",
                                     "/api/v1/location/**",
+                                    "/api/v1/carts/**",
                                     "/api/v1/vouchers/**",
                                     "/api/v1/inventory-journals/**",
+                                    // "api/v1/orders/total-amounts-storeid?storeId=**",
                                     "/api/v1/midtrans/**").permitAll()
                             .requestMatchers(
                                 "/api/v1/stores", 
@@ -116,11 +115,11 @@ public class SecurityConfig {
                                     "api/v1/orders/total-amount-last-week",
                                     "api/v1/orders/total-amount-last-month",
                                     "/api/v1/inventory-journals/**",
-                                    "api/v1/orders/total-amounts-storeid**",
+                                    // "api/v1/orders/total-amounts-storeid**",
                                     "/api/v1/stores/**"
                                     ).hasAuthority("SCOPE_super_admin")
                             .requestMatchers(
-                                    "api/v1/orders/total-amounts-storeid**",
+                                    // "api/v1/orders/total-amounts-storeid**",
                                     "api/v1/category",
                                     "/api/v1/products/stores/**",
                                     "api/v1/products/not-in-inventory**",
@@ -144,7 +143,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-mu.vercel.app"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-mu.vercel.app", "https://quick-basket-fe-dev.netlify.app/"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PUT", "OPTIONS", "PATCH", "DELETE"));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setExposedHeaders(List.of("Authorization"));

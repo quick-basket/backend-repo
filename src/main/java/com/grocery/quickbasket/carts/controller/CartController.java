@@ -62,4 +62,10 @@ public class CartController {
         cartService.deleteAllCartByUserIdAndStoreId(storeId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCartById(@PathVariable Long id) {
+        cartService.deleteCart(id);
+        return Response.successResponse("delete success", null);
+    }
 }

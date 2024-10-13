@@ -8,6 +8,7 @@ import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.PendingOrderExcerption;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.inventory.service.InventoryService;
 import com.grocery.quickbasket.location.service.LocationService;
 import com.grocery.quickbasket.midtrans.repository.MidtransRedisRepository;
 import com.grocery.quickbasket.midtrans.service.MidtransService;
@@ -77,6 +78,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final UserVoucherRepository userVoucherRepository;
     private final LocationService locationService;
+    private final InventoryService inventoryService;
 
     // Inject Midtrans configuration
     @Value("${midtrans.server.key}")
@@ -85,7 +87,7 @@ public class OrderServiceImpl implements OrderService {
     @Value("${midtrans.client.key}")
     private String midtransClientKey;
 
-    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper, PaymentService paymentService, LocationService locationService) {
+    public OrderServiceImpl(UserService userService, OrderRepository orderRepository, UserAddressService addressService, CartService cartService, StoreService storeService, ProductRepository productRepository, StoreRepository storeRepository, MidtransService midtransService, OrderItemRepository orderItemRepository, UserVoucherRepository userVoucherRepository, MidtransRedisRepository midtransRedisRepository, OrderMapper orderMapper, PaymentService paymentService, LocationService locationService, InventoryService inventoryService) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.addressService = addressService;
@@ -100,6 +102,7 @@ public class OrderServiceImpl implements OrderService {
         this.orderMapper = orderMapper;
         this.userVoucherRepository = userVoucherRepository;
         this.locationService = locationService;
+        this.inventoryService = inventoryService;
     }
 
     @Override
@@ -433,6 +436,7 @@ public class OrderServiceImpl implements OrderService {
             case "capture":
             case "settlement":
                 order.setStatus(OrderStatus.PROCESSING);
+                inventoryService.deleteStock(order);
                 break;
             case "pending":
                 order.setStatus(OrderStatus.PENDING_PAYMENT);
@@ -477,10 +481,16 @@ public class OrderServiceImpl implements OrderService {
 
     }
 
+    @Override
+    public OrderResponseDto markOrderAsShipped(String orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new DataNotFoundException("Order is not found"));
 
-//    private boolean isOrderOlderThan24Hours(Order order) {
-//        return order.getCreatedAt().isBefore(Instant.now().minus(24, ChronoUnit.HOURS));
-//    }
+        order.setStatus(OrderStatus.SHIPPED);
+        orderRepository.save(order);
+
+        return new OrderResponseDto().mapToDto(order);
+    }
 
     private void updateOrderStatusBasedOnMidtransStatus(Order order, String transactionStatus, String fraudStatus) {
         switch (transactionStatus) {
