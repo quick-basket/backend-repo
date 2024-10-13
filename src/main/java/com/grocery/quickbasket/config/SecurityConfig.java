@@ -143,7 +143,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
-        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-mu.vercel.app", "https://quick-basket-fe-dev.netlify.app/"));
+        corsConfiguration.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://quick-basket-fe-754136654186.asia-southeast1.run.app", "https://frontend-repo-mu.vercel.app", "https://quick-basket-fe-dev.netlify.app/", "https://quick-basket-fe.netlify.app/"));
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PUT", "OPTIONS", "PATCH", "DELETE"));
         corsConfiguration.setAllowCredentials(true);
         corsConfiguration.setExposedHeaders(List.of("Authorization"));
