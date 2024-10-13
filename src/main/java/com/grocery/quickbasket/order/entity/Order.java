@@ -3,6 +3,7 @@ package com.grocery.quickbasket.order.entity;
 import com.grocery.quickbasket.store.entity.Store;
 import com.grocery.quickbasket.user.entity.UserAddress;
 import com.grocery.quickbasket.utils.OrderCodeGenerator;
+import com.grocery.quickbasket.vouchers.entity.UserVoucher;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -57,6 +58,10 @@ public class Order {
     @Size(max = 255)
     @Column(name = "shipping_method")
     private String shippingMethod;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voucher_id")
+    private UserVoucher voucher;
 
     @Column(name = "shipping_cost", precision = 10, scale = 2)
     private BigDecimal shippingCost;

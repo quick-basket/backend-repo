@@ -68,6 +68,7 @@ public class MidtransServiceImpl implements MidtransService {
         Map<String, Object> params = new HashMap<>();
 
         BigDecimal totalAmount = order.getTotalAmount();
+        BigDecimal voucherDiscount = checkoutData.getSummary().getVoucher();
 
         // Set payment type based on the input
         params.put("payment_type", getPaymentType(paymentType));
@@ -97,6 +98,16 @@ public class MidtransServiceImpl implements MidtransService {
         shippingItem.put("quantity", "1");
         shippingItem.put("name", "Shipping Cost");
         itemDetails.add(shippingItem);
+
+        // Add voucher as a separate item with negative price
+        if (voucherDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            Map<String, String> voucherItem = new HashMap<>();
+            voucherItem.put("id", "VOUCHER");
+            voucherItem.put("price", voucherDiscount.negate().toString()); // Negate to make it a discount
+            voucherItem.put("quantity", "1");
+            voucherItem.put("name", "Voucher Discount");
+            itemDetails.add(voucherItem);
+        }
 
         params.put("item_details", itemDetails);
 
