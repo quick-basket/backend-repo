@@ -8,6 +8,7 @@ import com.grocery.quickbasket.carts.service.CartService;
 import com.grocery.quickbasket.exceptions.DataNotFoundException;
 import com.grocery.quickbasket.exceptions.PendingOrderExcerption;
 import com.grocery.quickbasket.exceptions.StoreNotFoundException;
+import com.grocery.quickbasket.exceptions.VoucherApplicationException;
 import com.grocery.quickbasket.inventory.service.InventoryService;
 import com.grocery.quickbasket.location.service.LocationService;
 import com.grocery.quickbasket.midtrans.repository.MidtransRedisRepository;
@@ -168,7 +169,25 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal voucherDiscount = BigDecimal.ZERO;
         if (userVoucherId != null) {
             List<CartListSummaryResponseDto> cartListSummary = convertToCartListSummary(itemListFromCart);
-            voucherDiscount = applyVoucher(userId, totalBeforeVoucher, cartListSummary, userVoucherId);
+            try {
+                UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
+                        .orElseThrow(() -> new DataNotFoundException("Voucher is not found"));
+
+                Voucher voucher = userVoucher.getVoucher();
+
+                if (!isVoucherValid(voucher, totalBeforeVoucher)) {
+                    throw new IllegalArgumentException("Voucher its not meet criteria");
+                }
+
+                voucherDiscount = calculateVoucherDiscount(userId, userVoucherId, totalBeforeVoucher, cartListSummary);
+                checkoutDto.setAppliedVoucherId(userVoucherId);
+                checkoutDto.setAppliedVoucherCode(userVoucherRepository.findById(userVoucherId)
+                        .map(uv -> uv.getVoucher().getCode())
+                        .orElse(null));
+            } catch (Exception e) {
+                log.error("Error applying voucher: ", e);
+                throw new VoucherApplicationException("Failed to apply voucher: " + e.getMessage());
+            }
         }
 
         BigDecimal finalTotal = totalBeforeVoucher.subtract(voucherDiscount);
@@ -181,6 +200,12 @@ public class OrderServiceImpl implements OrderService {
         checkoutDto.setSummary(summary);
 
         return checkoutDto;
+    }
+
+    private boolean isVoucherValid(Voucher voucher, BigDecimal totalBeforeVoucher) {
+        Instant now = Instant.now();
+        return now.isAfter(voucher.getStartDate()) && now.isBefore(voucher.getEndDate())
+                && (voucher.getMinPurchase() == null || totalBeforeVoucher.compareTo(voucher.getMinPurchase()) >= 0);
     }
 
     private List<CartListSummaryResponseDto> convertToCartListSummary(List<CartListResponseDto> itemListFromCart) {
@@ -196,48 +221,38 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
     }
 
-    public BigDecimal applyVoucher(Long userId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList, Long userVoucherId) {
-        try {
-            UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
-                    .orElseThrow(() -> new DataNotFoundException("Voucher tidak ditemukan atau sudah digunakan"));
+    private void applyVoucherToOrder(Order order, Long userVoucherId) {
+        if (userVoucherId != null) {
+            UserVoucher userVoucher = userVoucherRepository.findByIdAndIsUsedFalse(userVoucherId)
+                    .orElseThrow(() -> new DataNotFoundException("Voucher is not found"));
 
-            Voucher voucher = userVoucher.getVoucher();
-
-            Instant now = Instant.now();
-            if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
-                    || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
-                throw new IllegalArgumentException("Voucher tidak memenuhi syarat");
-            }
-
-            BigDecimal voucherDiscount = calculateVoucherDiscount(voucher, totalPrice, cartList);
-            // userVoucher.setIsUsed(true);
-            userVoucher.setUsedAt(now);
+            order.setVoucher(userVoucher);
+//            userVoucher.setIsUsed(true);
+            userVoucher.setUsedAt(Instant.now());
             userVoucherRepository.save(userVoucher);
-
-            return voucherDiscount;
-        } catch (Exception e) {
-            // Log the exception
-            log.error("Error applying voucher: ", e);
-            return BigDecimal.ZERO;
         }
     }
 
-    private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal totalDiscountPrice, List<CartListSummaryResponseDto> cartList) {
+    public BigDecimal calculateVoucherDiscount(Long userId, Long userVoucherId, BigDecimal totalPrice, List<CartListSummaryResponseDto> cartList) {
+        UserVoucher userVoucher = userVoucherRepository.findByIdAndUserIdAndIsUsedFalse(userVoucherId, userId)
+                .orElseThrow(() -> new DataNotFoundException("Voucher is not found"));
+
+        Voucher voucher = userVoucher.getVoucher();
+
+        Instant now = Instant.now();
+        if (now.isBefore(voucher.getStartDate()) || now.isAfter(voucher.getEndDate())
+                || (voucher.getMinPurchase() != null && totalPrice.compareTo(voucher.getMinPurchase()) < 0)) {
+            throw new IllegalArgumentException("Voucher not meet criteria");
+        }
+
         switch (voucher.getVoucherType()) {
             case CART_TOTAL:
             case REFERRAL:
                 if (voucher.getDiscountType() == DiscountTypes.PERCENTAGE) {
                     BigDecimal discountPercentage = voucher.getDiscountValue().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                    log.info("hasil total discount =========" + discountPercentage);
-                    BigDecimal discountAmount = totalDiscountPrice.multiply(discountPercentage).setScale(2, RoundingMode.HALF_UP);
-                    log.info("hasil total total discount amount =========" + discountAmount);
-                    return discountAmount;
+                    return totalPrice.multiply(discountPercentage).setScale(2, RoundingMode.HALF_UP);
                 } else if (voucher.getDiscountType() == DiscountTypes.FIXED) {
-                    log.info("hasil total price" + totalDiscountPrice);
-                    log.info("hasil diskon" + voucher.getDiscountValue());
-                    log.info("hasil diskon" + totalDiscountPrice.subtract(voucher.getDiscountValue()));
-                    BigDecimal discountAmount = voucher.getDiscountValue();
-                    return discountAmount;
+                    return voucher.getDiscountValue().min(totalPrice);
                 }
                 break;
 
@@ -259,14 +274,14 @@ public class OrderServiceImpl implements OrderService {
                 break;
 
             case SHIPPING:
-                return BigDecimal.ZERO; // Shipping discount handled separately
+                // Implement shipping discount logic here
+                return BigDecimal.ZERO;
 
             default:
-                throw new IllegalArgumentException("Jenis voucher tidak valid");
+                throw new IllegalArgumentException("Voucher is invalid");
         }
         return BigDecimal.ZERO;
     }
-
     @Override
     public OrderResponseDto updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
@@ -400,6 +415,8 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = createOrderFromCheckoutData(checkoutData);
+
+        applyVoucherToOrder(order, checkoutData.getAppliedVoucherId());
 
         Map<String, Object> midtransResponseMap = null;
         if (!paymentType.equalsIgnoreCase("manual")) {
