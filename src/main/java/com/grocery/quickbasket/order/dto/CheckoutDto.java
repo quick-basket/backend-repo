@@ -16,6 +16,8 @@ public class CheckoutDto {
     private String storeName;
     private Recipient recipient;
     private List<Item> items;
+    private Long appliedVoucherId;
+    private String appliedVoucherCode;
     private Summary summary;
     private String shippingMethod;
     private String orderCode;

@@ -71,14 +71,34 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public RegisterRespDto register(RegisterReqDto registerReqDto) {
-        if (userService.findByEmail(registerReqDto.getEmail()) != null) {
+        User existingUser = userService.findByEmail(registerReqDto.getEmail());
+
+        if (existingUser != null) {
             if (userService.isUserSocialLogin(registerReqDto.getEmail())) {
                 log.info("EMAIL IS SOCIAL LOGIN" + registerReqDto.getEmail());
                 throw new EmailAlreadyExistException("This email is already registered with a social account. Please log in using your social account.");
             }
-            throw new EmailAlreadyExistException("This email is already registered");
+
+            // Check if the existing user is verified
+            if (existingUser.getIsVerified()) {
+                throw new EmailAlreadyExistException("This email is already registered and verified");
+            }
+
+            // Update existing unverified user's information
+            existingUser.setName(registerReqDto.getName());
+            existingUser.setPhone(registerReqDto.getPhone());
+            userService.save(existingUser);
+
+            // Resend verification email
+            sendVerificationEmail(existingUser.getEmail(), AuthRedisRepository.REGISTRATION_PREFIX, "verify");
+
+            RegisterRespDto respDto = new RegisterRespDto();
+            respDto.setEmail(existingUser.getEmail());
+            respDto.setName(existingUser.getName());
+            return respDto;
         }
 
+        // Create new user if email doesn't exist
         User newUser = new User();
         newUser.setEmail(registerReqDto.getEmail());
         newUser.setName(registerReqDto.getName());
