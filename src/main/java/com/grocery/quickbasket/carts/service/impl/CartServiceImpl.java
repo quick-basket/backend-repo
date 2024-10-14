@@ -150,9 +150,10 @@ public class CartServiceImpl implements CartService {
 
                     break;
                 case FIXED:
-                    discountPrice = product.getPrice().subtract(discount.getValue());
+                    BigDecimal discountValues = discount.getValue();
+                    discountPrice = product.getPrice().subtract(discountValues);
                     cart.setDiscountPrice(discountPrice);
-                    
+                    break;
                 case BUY_ONE_GET_ONE:
                     discountPrice = product.getPrice();
                     cart.setDiscountPrice(discountPrice);
