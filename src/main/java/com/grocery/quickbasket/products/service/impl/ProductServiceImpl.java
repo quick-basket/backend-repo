@@ -337,7 +337,12 @@ public Page<ProductListResponseDto> getAllProductsByStoreId(Long storeId, String
             .map(inventory -> inventory.getProduct().getId())
             .collect(Collectors.toList());
     
-        Page<Product> productsNotInInventory = productRepository.findByIdNotInAndDeletedAtIsNull(productIdsInInventory, pageable);
+        Page<Product> productsNotInInventory;
+        if (productIdsInInventory.isEmpty()) {
+            productsNotInInventory = productRepository.findAllByDeletedAtIsNull(pageable);
+        } else {
+            productsNotInInventory = productRepository.findByIdNotInAndDeletedAtIsNull(productIdsInInventory, pageable);
+        }
     
         // Map the products to DTOs
         return productsNotInInventory.map(product -> {
