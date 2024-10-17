@@ -390,11 +390,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId) {
-        var claims = Claims.getClaimsFromJwt();
-        Long userId = (Long) claims.get("userId");
-
-        List<Order> orders = orderRepository.findByStoreIdAndUserId(storeId, userId);
+    public List<OrderListResponseDto> getAllOrderByStoreId(Long storeId) {
+        List<Order> orders = orderRepository.findByStoreId(storeId);
         return orders.stream()
                 .map(OrderListResponseDto::mapToDto)
                 .collect(Collectors.toList());
