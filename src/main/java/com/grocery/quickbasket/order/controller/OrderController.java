@@ -50,7 +50,7 @@ public class OrderController {
 
     @GetMapping("/store/{storeId}")
     public ResponseEntity<?> getAllOrderByStoreAndUserId(@PathVariable Long storeId) {
-        List<OrderListResponseDto> orders = orderService.getAllOrderByStoreIdAndUserId(storeId);
+        List<OrderListResponseDto> orders = orderService.getAllOrderByStoreId(storeId);
         return Response.successResponse("success fetch all order", orders);
     }
 
