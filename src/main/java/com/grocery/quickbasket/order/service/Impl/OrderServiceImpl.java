@@ -390,11 +390,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId) {
-        var claims = Claims.getClaimsFromJwt();
-        Long userId = (Long) claims.get("userId");
-
-        List<Order> orders = orderRepository.findByStoreIdAndUserId(storeId, userId);
+    public List<OrderListResponseDto> getAllOrderByStoreId(Long storeId) {
+        List<Order> orders = orderRepository.findByStoreId(storeId);
         return orders.stream()
                 .map(OrderListResponseDto::mapToDto)
                 .collect(Collectors.toList());
@@ -503,7 +500,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order is not found"));
 
-        order.setStatus(OrderStatus.SHIPPED);
+        order.setStatus(OrderStatus.DELIVERED);
         orderRepository.save(order);
 
         return new OrderResponseDto().mapToDto(order);
@@ -604,7 +601,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void updateDeliveredOrdersToCompleted() {
-        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.DELIVERED);
+        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.SHIPPED);
         Instant now = Instant.now();
         Duration sevenDays = Duration.ofDays(7);
 
@@ -612,7 +609,7 @@ public class OrderServiceImpl implements OrderService {
             Duration timeSinceDelivery = Duration.between(order.getUpdatedAt(), now);
 
             if (timeSinceDelivery.compareTo(sevenDays) > 0) {
-                order.setStatus(OrderStatus.SHIPPED);
+                order.setStatus(OrderStatus.DELIVERED);
                 orderRepository.save(order);
             }
         }

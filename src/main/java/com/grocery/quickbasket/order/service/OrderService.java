@@ -18,7 +18,7 @@ public interface OrderService {
     Order getOrder(Long orderId);
     OrderWithMidtransResponseDto getPendingOrder(Long userId);
     Order createOrderFromCheckoutData(CheckoutDto checkoutData) throws MidtransError;
-    List<OrderListResponseDto> getAllOrderByStoreIdAndUserId(Long storeId);
+    List<OrderListResponseDto> getAllOrderByStoreId(Long storeId);
 
     @Transactional
     OrderWithMidtransResponseDto createOrder(CheckoutDto checkoutData, String paymentType) throws MidtransError;

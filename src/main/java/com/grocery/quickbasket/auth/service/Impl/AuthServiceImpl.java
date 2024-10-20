@@ -178,14 +178,20 @@ public class AuthServiceImpl implements AuthService {
         Instant now = Instant.now();
         User user = userService.findByEmail(payloadSocialLoginReqDto.getEmail());
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .issuer("quick-basket")
                 .issuedAt(now)
                 .expiresAt(now.plus(12, ChronoUnit.HOURS))
                 .subject(user.getEmail())
                 .claim("scope", user.getRole().name())
-                .claim("userId", user.getId())
-                .build();
+                .claim("userId", user.getId());
+        // add store_id for store_admin
+        if (user.getRole() == Role.store_admin) {
+            Long storeId = storeAdminService.getStoreIdForUser(user.getId());
+            claimsBuilder.claim("store_id", storeId);
+        }
+
+        JwtClaimsSet claims = claimsBuilder.build();
 
         return jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
 
