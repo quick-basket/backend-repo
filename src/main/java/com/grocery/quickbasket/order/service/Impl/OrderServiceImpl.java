@@ -601,7 +601,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void updateDeliveredOrdersToCompleted() {
-        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.DELIVERED);
+        List<Order> deliveredOrders = orderRepository.findByStatus(OrderStatus.SHIPPED);
         Instant now = Instant.now();
         Duration sevenDays = Duration.ofDays(7);
 
@@ -609,7 +609,7 @@ public class OrderServiceImpl implements OrderService {
             Duration timeSinceDelivery = Duration.between(order.getUpdatedAt(), now);
 
             if (timeSinceDelivery.compareTo(sevenDays) > 0) {
-                order.setStatus(OrderStatus.SHIPPED);
+                order.setStatus(OrderStatus.DELIVERED);
                 orderRepository.save(order);
             }
         }
