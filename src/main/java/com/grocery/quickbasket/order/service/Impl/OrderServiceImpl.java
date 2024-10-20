@@ -500,7 +500,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new DataNotFoundException("Order is not found"));
 
-        order.setStatus(OrderStatus.SHIPPED);
+        order.setStatus(OrderStatus.DELIVERED);
         orderRepository.save(order);
 
         return new OrderResponseDto().mapToDto(order);
