@@ -219,7 +219,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void sendVerificationEmail(String email, String prefix, String linkType) {
         String verificationCode = UUID.randomUUID().toString();
-        String verificationLink = "https://quick-basket-fe-dev.netlify.app/" + linkType + "?code=" + verificationCode;
+        String verificationLink = "https://quick-basket-fe.netlify.app/" + linkType + "?code=" + verificationCode;
 
         authRedisRepository.saveVerificationToken(email, verificationCode, prefix);
         emailService.sendEmail(email, verificationLink);
